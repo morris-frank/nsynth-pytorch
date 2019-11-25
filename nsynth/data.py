@@ -1,6 +1,5 @@
 import json
 import os
-import random
 from glob import glob
 
 import librosa
@@ -39,9 +38,9 @@ class NSynthDataset(data.Dataset):
         return len(self.attrs)
 
     def __getitem__(self, item: int):
-        name = random.choice(self.names)
+        name = self.names[item]
         attrs = self.attrs[name]
         path = f'{self.root}/audio/{name}.wav'
         raw, _ = librosa.load(path, mono=self.mono, sr=attrs['sample_rate'])
-        attrs['audio'] = raw
+        attrs['audio'] = raw[None, ...]
         return attrs

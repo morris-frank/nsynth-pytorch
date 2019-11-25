@@ -72,7 +72,7 @@ class TemporalEncoder(nn.Module):
         self.encoder.append(
             nn.AvgPool1d(kernel_size=hop_length)
         )
-        self.encoder = nn.ModuleList(self.encoder)
+        self.encoder = nn.Sequential(*self.encoder)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.μ_encode:
