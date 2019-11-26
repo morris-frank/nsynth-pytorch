@@ -26,9 +26,11 @@ class WaveNetDecoder(nn.Module):
         WaveNet as described NSynth [http://arxiv.org/abs/1704.01279].
 
         This WaveNet has some differences to the original WaveNet. Namely:
-        · It uses a conditioning on all layers, input always the same conditioning, added to the dilated values
-          (features and gates) as well as after  the final skip convolution.
-        · The skip connection does not start at 0 but comes from a 1×1 Conv from the initial Conv.
+        · It uses a conditioning on all layers, input always the same
+          conditioning, added to the dilated values (features and gates) as well
+          as after  the final skip convolution.
+        · The skip connection does not start at 0 but comes from a 1×1
+          Convolution from the initial Convolution.
 
         Args:
             n_layers: Number of layers in each block
@@ -37,7 +39,8 @@ class WaveNetDecoder(nn.Module):
             skip_width: The width/size of the skip connections
             channels: Number of input channels
             quantization_channels: Number of final output channels
-            bottleneck_dims: Dim/width/size of the conditioning, output of the encoder
+            bottleneck_dims: Dim/width/size of the conditioning, output of the
+                encoder
             kernel_size: Kernel-size to use
         """
         super(WaveNetDecoder, self).__init__()
@@ -60,13 +63,17 @@ class WaveNetDecoder(nn.Module):
                                         nn.Conv1d(skip_width, skip_width, 1))
         self.final_cond = nn.Conv1d(bottleneck_dims, skip_width, 1)
         self.final_quant = nn.Sequential(nn.ReLU(),
-                                         nn.Conv1d(skip_width, quantization_channels, 1))
+                                         nn.Conv1d(skip_width,
+                                                   quantization_channels, 1))
 
-    def _make_conv_list(self, in_channels: int, out_channels: int, kernel_size: int) -> nn.ModuleList:
+    def _make_conv_list(self, in_channels: int, out_channels: int,
+                        kernel_size: int) -> nn.ModuleList:
         """
-        A little helper function for generating lists of Convolutions. Will give list of n_blocks × n_layers number of
-        convs. If kernel_size is bigger than one we use the BlockWise Conv and calculate the block size from the
-        power-2 dilation otherwise we always use the same 1×1-conv1d.
+        A little helper function for generating lists of Convolutions. Will give
+        list of n_blocks × n_layers number of convolutions. If kernel_size is
+        bigger than one we use the BlockWise Convolution and calculate the block
+        size from the power-2 dilation otherwise we always use the same
+        1×1-conv1d.
 
         Args:
             in_channels: In channels
@@ -78,9 +85,10 @@ class WaveNetDecoder(nn.Module):
         """
         conv = nn.Conv1d if kernel_size == 1 else BlockWiseConv1d
         module_list = []
+        args = (in_channels, out_channels, kernel_size)
         for _, layer in product(range(self.n_stages), range(self.n_layers)):
             opt = () if kernel_size == 1 else (2 ** layer, True)
-            module_list.append(conv(*((in_channels, out_channels, kernel_size) + opt)))
+            module_list.append(conv(*(args + opt)))
         return nn.ModuleList(module_list)
 
     def forward(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
@@ -88,7 +96,8 @@ class WaveNetDecoder(nn.Module):
         x = self.initial_dilation(x)
         skip = self.initial_skip(x)
 
-        for l_dilation, l_cond, l_residual, l_skip in zip(self.dilations, self.conds, self.residuals, self.skips):
+        layers = (self.dilations, self.conds, self.residuals, self.skips)
+        for l_dilation, l_cond, l_residual, l_skip in zip(*layers):
             dilated = l_dilation(x)
             dilated += l_cond(embedding)
             filters = F.sigmoid(dilated[:, :self.width, :])

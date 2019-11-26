@@ -10,7 +10,7 @@ from torch.utils import data
 
 class NSynthDataset(data.Dataset):
     def __init__(self,
-                 root: str = '/home/morris/var/data/nsynth/test/',
+                 root: str,
                  subset: str = 'train',
                  dtype: torch_dtype = torch.float32,
                  mono: bool = True):
@@ -18,9 +18,10 @@ class NSynthDataset(data.Dataset):
         self.subset = subset
         self.mono = mono
 
-        self.root = os.path.normpath(root)
+        self.root = os.path.normpath(f'{root}/{subset}')
         if not os.path.isdir(self.root):
-            raise ValueError('The given root path is not a directory.')
+            raise ValueError('The given root path is not a directory.'
+                             f'\nI got {self.root}')
 
         if not os.path.isfile(f'{self.root}/examples.json'):
             raise ValueError('The given root path does not contain an'
@@ -36,6 +37,9 @@ class NSynthDataset(data.Dataset):
 
     def __len__(self):
         return len(self.attrs)
+
+    def __str__(self):
+        return f'NSynthDataset: {len(self):>7} samples in subset {self.subset}'
 
     def __getitem__(self, item: int):
         name = self.names[item]

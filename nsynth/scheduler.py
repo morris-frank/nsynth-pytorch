@@ -26,6 +26,7 @@ class ManualMultiStepLR(_LRScheduler):
                              len(milestones), len(gammas))
         self.milestones = milestones
         self.gammas = gammas
+        self.base_lrs, self.last_epoch = None, last_epoch
         super(ManualMultiStepLR, self).__init__(optimizer, last_epoch)
 
     def get_lr(self):

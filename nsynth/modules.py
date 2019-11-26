@@ -6,7 +6,8 @@ from .functional import time_to_batch, batch_to_time
 
 class BlockWiseConv1d(nn.Conv1d):
     """
-    Block-wise 1D-Convolution as used in NSynth [http://arxiv.org/abs/1704.01279].
+    Block-wise 1D-Convolution as used in original NSynth
+    [http://arxiv.org/abs/1704.01279].
     """
 
     def __init__(self,
@@ -17,16 +18,18 @@ class BlockWiseConv1d(nn.Conv1d):
                  causal: bool = False,
                  **kwargs):
         """
-        Block-wise 1D-Convolution as used in NSynth [http://arxiv.org/abs/1704.01279].
+        Block-wise 1D-Convolution as used in original NSynth
+        [http://arxiv.org/abs/1704.01279].
         Args:
             in_channels: Num of Channels of the Input
-            out_channels: Num of Filters in the Conv
+            out_channels: Num of Filters in the Convolution
             kernel_size: Size of the Filters
             block_size: Length of the Blocks we split the input into
             causal: Whether to do it Causal or not
             **kwargs:
         """
-        super(BlockWiseConv1d, self).__init__(in_channels, out_channels, kernel_size, **kwargs)
+        super(BlockWiseConv1d, self).__init__(in_channels, out_channels,
+                                              kernel_size, **kwargs)
         self.block_size = block_size
 
         assert kernel_size % 2 != 0
