@@ -18,7 +18,7 @@ class NSynthDataset(data.Dataset):
         self.subset = subset
         self.mono = mono
 
-        self.root = os.path.normpath(f'{root}/{subset}')
+        self.root = os.path.normpath(f'{root}/nsynth-{subset}')
         if not os.path.isdir(self.root):
             raise ValueError('The given root path is not a directory.'
                              f'\nI got {self.root}')
