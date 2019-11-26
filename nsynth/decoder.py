@@ -11,6 +11,13 @@ from .modules import BlockWiseConv1d
 class WaveNetDecoder(nn.Module):
     """
     WaveNet as described NSynth [http://arxiv.org/abs/1704.01279].
+
+    This WaveNet has some differences to the original WaveNet. Namely:
+    · It uses a conditioning on all layers, input always the same
+      conditioning, added to the dilated values (features and gates) as well
+      as after  the final skip convolution.
+    · The skip connection does not start at 0 but comes from a 1×1
+      Convolution from the initial Convolution.
     """
 
     def __init__(self,
@@ -23,25 +30,15 @@ class WaveNetDecoder(nn.Module):
                  bottleneck_dims: int = 16,
                  kernel_size: int = 3):
         """
-        WaveNet as described NSynth [http://arxiv.org/abs/1704.01279].
-
-        This WaveNet has some differences to the original WaveNet. Namely:
-        · It uses a conditioning on all layers, input always the same
-          conditioning, added to the dilated values (features and gates) as well
-          as after  the final skip convolution.
-        · The skip connection does not start at 0 but comes from a 1×1
-          Convolution from the initial Convolution.
-
-        Args:
-            n_layers: Number of layers in each block
-            n_blocks: Number of blocks
-            width: The width/size of the hidden layers
-            skip_width: The width/size of the skip connections
-            channels: Number of input channels
-            quantization_channels: Number of final output channels
-            bottleneck_dims: Dim/width/size of the conditioning, output of the
-                encoder
-            kernel_size: Kernel-size to use
+        :param n_layers: Number of layers in each block
+        :param n_blocks: Number of blocks
+        :param width: The width/size of the hidden layers
+        :param skip_width: The width/size of the skip connections
+        :param channels: Number of input channels
+        :param quantization_channels: Number of final output channels
+        :param bottleneck_dims: Dim/width/size of the conditioning, output
+            of the encoder
+        :param kernel_size: Kernel-size to use
         """
         super(WaveNetDecoder, self).__init__()
         self.width = width

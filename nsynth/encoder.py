@@ -3,8 +3,8 @@ from itertools import product
 import torch
 from torch import nn
 
-from .modules import BlockWiseConv1d
 from .functional import encode_μ_law
+from .modules import BlockWiseConv1d
 
 
 class TemporalEncoder(nn.Module):
@@ -24,19 +24,15 @@ class TemporalEncoder(nn.Module):
                  μ_encode: bool = True,
                  use_bias: bool = True):
         """
-        The Non-Causal Temporal Encoder as described in original NSynth
-        [http://arxiv.org/abs/1704.01279].
-
-        Args:
-            channels: Number of input channels
-            n_layers: Number of layers in each stage in the encoder
-            n_blocks: Number of stages
-            width: Size of the hidden channels in all layers
-            kernel_size: KS for all 1D-convolutions
-            bottleneck_dims: Final number of features
-            hop_length: Final bottleneck pooling
-            μ_encode: Whether to μ-law encode inputs before the encoder
-            use_bias: Whether to use bias in all the convolutions.
+        :param channels: Number of input channels
+        :param n_layers: Number of layers in each stage in the encoder
+        :param n_blocks: Number of stages
+        :param width: Size of the hidden channels in all layers
+        :param kernel_size: KS for all 1D-convolutions
+        :param bottleneck_dims: Final number of features
+        :param hop_length: Final bottleneck pooling
+        :param μ_encode: Whether to μ-law encode inputs before the encoder
+        :param use_bias: Whether to use bias in all the convolutions.
         """
         super(TemporalEncoder, self).__init__()
         self.μ_encode = μ_encode

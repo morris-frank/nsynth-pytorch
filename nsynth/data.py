@@ -9,14 +9,23 @@ from torch.utils import data
 
 
 class NSynthDataset(data.Dataset):
-    def __init__(self,
-                 root: str,
-                 subset: str = 'train',
-                 dtype: torch_dtype = torch.float32,
-                 mono: bool = True):
+    """
+    Dataset to handle the NSynth data in json/wav format.
+    """
+    def __init__(self, root: str, subset: str = 'train',
+                 dtype: torch_dtype = torch.float32, mono: bool = True):
+        """
+        :param root: The path to the dataset. Should contain the sub-folders for
+            the splits as extracted from the .tar.gz.
+        :param subset: The subset to use.
+        :param dtype: The data type to output for the audio signals.
+        :param mono: Whether to use mono signal instead of stereo.
+        """
         self.dtype = dtype
-        self.subset = subset
+        self.subset = subset.lower()
         self.mono = mono
+
+        assert self.subset in ['valid', 'test', 'train']
 
         self.root = os.path.normpath(f'{root}/nsynth-{subset}')
         if not os.path.isdir(self.root):
@@ -46,5 +55,8 @@ class NSynthDataset(data.Dataset):
         attrs = self.attrs[name]
         path = f'{self.root}/audio/{name}.wav'
         raw, _ = librosa.load(path, mono=self.mono, sr=attrs['sample_rate'])
-        attrs['audio'] = raw[None, ...]
+        # Add channel dimension.
+        if not self.mono and raw.ndim == 1:
+            raw = raw[None, ...]
+        attrs['audio'] = torch.tensor(raw, dtype=self.dtype)
         return attrs
