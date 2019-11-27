@@ -67,7 +67,7 @@ def train(model: nn.Module, device: str, data_dir: str, save_dir: str,
     scheduler = ManualMultiStepLR(optimizer, lr_milestones, lr_gammas)
 
     train_set = NSynthDataset(data_dir, subset='train')
-    n_epochs = (n_it * n_batch) // len(train_set)
+    n_epochs = (n_it * n_batch) // len(train_set) + 1
 
     test_set = NSynthDataset(data_dir, subset='test')
 

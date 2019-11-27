@@ -49,7 +49,7 @@ class WaveNetDecoder(nn.Module):
                                                 kernel_size=kernel_size,
                                                 block_size=1,
                                                 causal=True)
-        self.initial_skip = nn.Conv1d(channels, skip_width, 1)
+        self.initial_skip = nn.Conv1d(width, skip_width, 1)
 
         self.dilations = self._make_conv_list(width, 2 * width, kernel_size)
         self.conds = self._make_conv_list(bottleneck_dims, 2 * width, 1)
@@ -96,9 +96,9 @@ class WaveNetDecoder(nn.Module):
         layers = (self.dilations, self.conds, self.residuals, self.skips)
         for l_dilation, l_cond, l_residual, l_skip in zip(*layers):
             dilated = l_dilation(x)
-            dilated += l_cond(embedding)
-            filters = F.sigmoid(dilated[:, :self.width, :])
-            gates = F.tanh(dilated[:, self.width:, :])
+            dilated = self._condition(dilated, l_cond(embedding))
+            filters = torch.sigmoid(dilated[:, :self.width, :])
+            gates = torch.tanh(dilated[:, self.width:, :])
             pre_res = filters * gates
 
             x += l_residual(pre_res)
@@ -108,3 +108,9 @@ class WaveNetDecoder(nn.Module):
         skip += self.final_cond(embedding)
         quant_skip = self.final_quant(skip)
         return quant_skip
+
+    @staticmethod
+    def _condition(x, c):
+        cond = nn.Upsample(scale_factor=512, mode='nearest')(c)
+        x = x + cond
+        return x
