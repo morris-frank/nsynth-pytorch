@@ -21,7 +21,6 @@ class TemporalEncoder(nn.Module):
                  kernel_size: int = 3,
                  bottleneck_dims: int = 16,
                  hop_length: int = 512,
-                 μ_encode: bool = True,
                  use_bias: bool = True):
         """
         :param channels: Number of input channels
@@ -31,11 +30,9 @@ class TemporalEncoder(nn.Module):
         :param kernel_size: KS for all 1D-convolutions
         :param bottleneck_dims: Final number of features
         :param hop_length: Final bottleneck pooling
-        :param μ_encode: Whether to μ-law encode inputs before the encoder
         :param use_bias: Whether to use bias in all the convolutions.
         """
         super(TemporalEncoder, self).__init__()
-        self.μ_encode = μ_encode
 
         self.encoder = []
         self.encoder.append(
@@ -73,6 +70,4 @@ class TemporalEncoder(nn.Module):
         self.encoder = nn.Sequential(*self.encoder)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if self.μ_encode:
-            x = encode_μ_law(x) / 128.
         return self.encoder(x)

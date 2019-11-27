@@ -7,11 +7,14 @@ import torch
 from torch import dtype as torch_dtype
 from torch.utils import data
 
+from .functional import encode_μ_law
+
 
 class NSynthDataset(data.Dataset):
     """
     Dataset to handle the NSynth data in json/wav format.
     """
+
     def __init__(self, root: str, subset: str = 'train',
                  dtype: torch_dtype = torch.float32, mono: bool = True):
         """
@@ -64,3 +67,18 @@ class NSynthDataset(data.Dataset):
             raw = raw[None, ...]
         attrs['audio'] = torch.tensor(raw, dtype=self.dtype)
         return attrs
+
+
+class AudioOnlyNSynthDataset(NSynthDataset):
+    def __init__(self, *args, **kwargs):
+        super(AudioOnlyNSynthDataset, self).__init__(*args, **kwargs)
+
+    def __getitem__(self, item: int):
+        attrs = super(AudioOnlyNSynthDataset, self).__getitem__(item)
+        # μ-Law gives us range [-128, 128]
+        # Input is in range [-1, 1]
+        # The loss CrossEntropy Targets are range [0, 255]
+        audio = encode_μ_law(attrs['audio'])
+        audio_scaled = audio / 128
+        audio_target = (audio + 128).long()
+        return audio_scaled, audio_target

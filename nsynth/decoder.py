@@ -2,7 +2,6 @@ from itertools import product
 
 import torch
 from torch import nn
-from torch.nn import functional as F
 
 from .functional import shift1d
 from .modules import BlockWiseConv1d

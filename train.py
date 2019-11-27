@@ -9,7 +9,7 @@ from torch import optim
 from torch.utils import data
 
 from nsynth.autoencoder import WaveNetAutoencoder
-from nsynth.data import NSynthDataset
+from nsynth.data import AudioOnlyNSynthDataset
 from nsynth.scheduler import ManualMultiStepLR
 
 
@@ -66,19 +66,21 @@ def train(model: nn.Module, device: str, data_dir: str, save_dir: str,
     optimizer = optim.Adam(model.parameters(), eps=1e-8)
     scheduler = ManualMultiStepLR(optimizer, lr_milestones, lr_gammas)
 
-    train_set = NSynthDataset(data_dir, subset='train')
-    n_epochs = (n_it * n_batch) // len(train_set) + 1
-
-    test_set = NSynthDataset(data_dir, subset='test')
-
+    train_set = AudioOnlyNSynthDataset(data_dir, subset='valid')
     loader = data.DataLoader(train_set, batch_size=n_batch, shuffle=True)
 
+    test_set = AudioOnlyNSynthDataset(data_dir, subset='test')
+
+    losser = nn.CrossEntropyLoss()
+
     losses = []
-    print(f'Training for {n_epochs} epochs.')
+    n_epochs = (n_it * n_batch) // len(train_set) + 1
+    print(f'Training for {n_epochs} epochs with batch size {n_batch}.')
     for epoch in range(n_epochs):
-        for it, batch in enumerate(loader):
+        for it, (x, y) in enumerate(loader):
             model.train()
-            loss = model(batch['audio'].to(device))
+            logits = model(x.to(device))
+            loss = losser(logits, y)
             model.zero_grad()
             loss.backward()
             optimizer.step()
