@@ -1,7 +1,6 @@
 import os
 from argparse import ArgumentParser
 from datetime import datetime
-from itertools import product
 from statistics import mean
 
 import torch
@@ -68,38 +67,38 @@ def train(model: nn.Module, device: str, data_dir: str, save_dir: str,
     scheduler = ManualMultiStepLR(optimizer, lr_milestones, lr_gammas)
 
     train_set = NSynthDataset(data_dir, subset='train')
-    print(train_set)
     n_epochs = (n_it * n_batch) // len(train_set)
-    print(f'Training for {n_epochs} epochs.')
 
     test_set = NSynthDataset(data_dir, subset='test')
 
-    loader = data.DataLoader(train_set, n_batch, shuffle=True)
+    loader = data.DataLoader(train_set, batch_size=n_batch, shuffle=True)
 
     losses = []
-    for it, (epoch, batch) in enumerate(product(range(n_epochs), loader)):
-        model.train()
-        loss = model(batch['audio'].to(device))
-        model.zero_grad()
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
+    print(f'Training for {n_epochs} epochs.')
+    for epoch in range(n_epochs):
+        for it, batch in enumerate(loader):
+            model.train()
+            loss = model(batch['audio'].to(device))
+            model.zero_grad()
+            loss.backward()
+            optimizer.step()
+            scheduler.step()
 
-        losses.append(loss.item())
-        if it % it_print == 0:
-            print(f'it={it:>10},loss:{mean(losses[-it_print:]):.3e}')
+            losses.append(loss.detach().item())
+            if it % it_print == 0:
+                print(f'it={it:>10},loss:{mean(losses[-it_print:]):.3e}')
 
-        if it % it_save == 0:
-            torch.save({
-                'epoch': epoch,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'loss': loss
-            }, save_path)
+            if it % it_save == 0:
+                torch.save({
+                    'epoch': epoch,
+                    'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict(),
+                    'loss': loss
+                }, save_path)
 
-        if it % it_test == 0:
-            print('RUNNING TEST')
-            raise NotImplementedError
+            if it % it_test == 0:
+                print('RUNNING TEST')
+                raise NotImplementedError
 
 
 if __name__ == '__main__':

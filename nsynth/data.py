@@ -36,8 +36,12 @@ class NSynthDataset(data.Dataset):
             raise ValueError('The given root path does not contain an'
                              'examples.json')
 
+        print(f'Loading NSynth data from split {self.subset} at {self.root}')
+
         with open(f'{self.root}/examples.json', 'r') as fp:
             self.attrs = json.load(fp)
+
+        print(f'\tFound {len(self)} samples.')
 
         for file in glob(f'{self.root}/audio/*.wav'):
             assert os.path.basename(file)[:-4] in self.attrs
@@ -56,7 +60,7 @@ class NSynthDataset(data.Dataset):
         path = f'{self.root}/audio/{name}.wav'
         raw, _ = librosa.load(path, mono=self.mono, sr=attrs['sample_rate'])
         # Add channel dimension.
-        if not self.mono and raw.ndim == 1:
+        if raw.ndim == 1:
             raw = raw[None, ...]
         attrs['audio'] = torch.tensor(raw, dtype=self.dtype)
         return attrs
