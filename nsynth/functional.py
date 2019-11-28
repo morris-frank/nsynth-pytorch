@@ -16,17 +16,18 @@ def time_to_batch(x: torch.Tensor, block_size: int) -> torch.Tensor:
         [Batch * block size × Channels × Length/block_size]
     """
     assert x.ndimension() == 3
-    batch_size, channels, length = x.shape
+    nbatch, c, len = x.shape
 
-    y = torch.reshape(x, [batch_size, channels, length // block_size, block_size])
+    y = torch.reshape(x, [nbatch, c, len // block_size, block_size])
     y = y.permute(0, 3, 1, 2)
-    y = torch.reshape(y, [batch_size * block_size, channels, length // block_size])
+    y = torch.reshape(y, [nbatch * block_size, c, len // block_size])
     return y.contiguous()
 
 
 def batch_to_time(x: torch.Tensor, block_size: int) -> torch.Tensor:
     """
-    Inverse of time_to_batch. Concatenates a batched time-signal back to correct time-domain.
+    Inverse of time_to_batch. Concatenates a batched time-signal back to
+    correct time-domain.
 
     Args:
         x: The batched input size [Batch * block_size × Channels × Length]
@@ -62,7 +63,8 @@ def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
     return y.contiguous()
 
 
-def encode_μ_law(x: torch.Tensor, μ: int = 255, cast: bool = False) -> torch.Tensor:
+def encode_μ_law(x: torch.Tensor, μ: int = 255, cast: bool = False)\
+        -> torch.Tensor:
     """
     Encodes the input tensor element-wise with μ-law encoding
 

@@ -20,8 +20,8 @@ class NSynthDataset(data.Dataset):
     def __init__(self, root: str, subset: str = 'train',
                  dtype: torch_dtype = torch.float32, mono: bool = True):
         """
-        :param root: The path to the dataset. Should contain the sub-folders for
-            the splits as extracted from the .tar.gz.
+        :param root: The path to the dataset. Should contain the sub-folders
+            for the splits as extracted from the .tar.gz.
         :param subset: The subset to use.
         :param dtype: The data type to output for the audio signals.
         :param mono: Whether to use mono signal instead of stereo.

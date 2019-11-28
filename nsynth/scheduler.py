@@ -7,9 +7,9 @@ from torch.optim.optimizer import Optimizer
 
 class ManualMultiStepLR(_LRScheduler):
     """
-    A completely manual scheduler. This uses a list of learning rates and a list
-    of epochs such that at each of this epochs we change to the given learning
-    rate but keep it constant until the next milestone.
+    A completely manual scheduler. This uses a list of learning rates and a
+    list of epochs such that at each of this epochs we change to the given
+    learning rate but keep it constant until the next milestone.
 
     Because the original paper uses a manual LR-schedule this is used
     replicate that.

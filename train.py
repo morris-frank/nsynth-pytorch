@@ -17,8 +17,8 @@ def main(args):
                                encoder_width=args.encoder_width,
                                decoder_width=args.decoder_width,
                                channels=1).to(args.device)
-    train(model, args.device, args.datadir, args.savedir, args.nbatch, args.nit,
-          args.itprint, args.itsave, args.ittest, args.crop_length)
+    train(model, args.device, args.datadir, args.savedir, args.nbatch,
+          args.nit, args.itprint, args.itsave, args.ittest, args.crop_length)
 
 
 def train(model: nn.Module, device: str, data_dir: str, save_dir: str,
@@ -40,7 +40,7 @@ def train(model: nn.Module, device: str, data_dir: str, save_dir: str,
     train_set = AudioOnlyNSynthDataset(data_dir, subset='valid', crop=crop)
     loader = data.DataLoader(train_set, batch_size=n_batch, shuffle=True)
 
-    test_set = AudioOnlyNSynthDataset(data_dir, subset='test')
+    # test_set = AudioOnlyNSynthDataset(data_dir, subset='test')
 
     cross_entropy = nn.CrossEntropyLoss()
 

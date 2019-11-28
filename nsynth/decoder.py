@@ -67,10 +67,10 @@ class WaveNetDecoder(nn.Module):
     def _make_conv_list(self, in_channels: int, out_channels: int,
                         kernel_size: int) -> nn.ModuleList:
         """
-        A little helper function for generating lists of Convolutions. Will give
-        list of n_blocks × n_layers number of convolutions. If kernel_size is
-        bigger than one we use the BlockWise Convolution and calculate the block
-        size from the power-2 dilation otherwise we always use the same
+        A little helper function for generating lists of Convolutions. Will
+        give list of n_blocks × n_layers number of convolutions. If kernel_size
+        is bigger than one we use the BlockWise Convolution and calculate the
+        block size from the power-2 dilation otherwise we always use the same
         1×1-conv1d.
 
         Args:
@@ -89,7 +89,8 @@ class WaveNetDecoder(nn.Module):
             module_list.append(conv(*(args + opt)))
         return nn.ModuleList(module_list)
 
-    def forward(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, embedding: torch.Tensor) \
+            -> torch.Tensor:
         x = shift1d(x, -1)
         x = self.initial_dilation(x)
         skip = self.initial_skip(x)
@@ -108,7 +109,7 @@ class WaveNetDecoder(nn.Module):
 
         skip = self.final_skip(skip)
         skip = self._condition(skip, self.final_cond(embedding),
-                                      self.scale_factor)
+                               self.scale_factor)
         quant_skip = self.final_quant(skip)
         return quant_skip
 
