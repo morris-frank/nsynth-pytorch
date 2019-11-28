@@ -14,8 +14,8 @@ from .scheduler import ManualMultiStepLR
 
 
 def train(model: nn.Module, gpu: List[int], data_dir: str, save_dir: str,
-          crop: int, n_batch: int, n_it: int, it_print: int, it_save: int, it_test: int,
-          use_board: bool):
+          crop: int, n_batch: int, n_it: int, it_print: int, it_save: int,
+          it_test: int, use_board: bool):
     """
 
     :param model: The WaveNet model Module
