@@ -1,5 +1,5 @@
 import os
-from argparse import ArgumentParser
+import time
 from datetime import datetime
 from statistics import mean
 
@@ -9,15 +9,19 @@ from torch import optim
 from torch.utils import data
 
 from nsynth import WaveNetAutoencoder, ManualMultiStepLR
+from nsynth.config import make_config
 from nsynth.data import AudioOnlyNSynthDataset
 
 
 def main(args):
+    device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
     model = WaveNetAutoencoder(bottleneck_dims=args.bottleneck_dims,
                                encoder_width=args.encoder_width,
                                decoder_width=args.decoder_width,
-                               channels=1).to(args.device)
-    train(model, args.device, args.datadir, args.savedir, args.nbatch,
+                               channels=1).to(device)
+    if args.gpu:
+        model = nn.DataParallel(model, device_ids=args.gpu)
+    train(model, device, args.datadir, args.savedir, args.nbatch,
           args.nit, args.itprint, args.itsave, args.ittest, args.crop_length)
 
 
@@ -48,9 +52,10 @@ def train(model: nn.Module, device: str, data_dir: str, save_dir: str,
     n_epochs = (n_it * n_batch) // len(train_set) + 1
     print(f'Training for {n_epochs} epochs with batch size {n_batch}.')
     for epoch in range(n_epochs):
+        epoch_time = time.time()
         for it, (x, y) in enumerate(loader):
             model.train()
-            logits = model(x.to(device))
+            logits = model(x)
             loss = cross_entropy(logits, y.to(device))
             model.zero_grad()
             loss.backward()
@@ -59,9 +64,10 @@ def train(model: nn.Module, device: str, data_dir: str, save_dir: str,
 
             losses.append(loss.detach().item())
             if it % it_print == 0:
-                print(f'it={it:>10},loss:{mean(losses[-it_print:]):.3e}')
+                print(f'it={it:>10}\tloss:{mean(losses[-it_print:]):.3e}\t'
+                      f'time/it:{(time.time() - epoch_time) / (it + 1)}')
 
-            if it % it_save == 0:
+            if False and it % it_save == 0:
                 torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
@@ -75,29 +81,4 @@ def train(model: nn.Module, device: str, data_dir: str, save_dir: str,
 
 
 if __name__ == '__main__':
-    parser = ArgumentParser()
-    parser.add_argument('--device', type=str, default="cuda:0",
-                        help="Training device 'cpu' or 'cuda:0'")
-    parser.add_argument('--datadir', type=str, required=True,
-                        help='The top-level directory of NSynth dataset '
-                             '(containing the split directories.)')
-    parser.add_argument('--savedir', type=str, default='./models/',
-                        help='The path to save the checkpoints to.')
-    parser.add_argument('--nbatch', type=int, default=32,
-                        help='The batch size.')
-    parser.add_argument('--nit', type=int, default=200000,
-                        help='Number of batches to train for.')
-    parser.add_argument('--itprint', type=int, default=10,
-                        help='Frequency of loss print.')
-    parser.add_argument('--itsave', type=int, default=1000,
-                        help='Frequency of model checkpoints.')
-    parser.add_argument('--ittest', type=int, default=1000,
-                        help='Frequency of running the test set.')
-    parser.add_argument('--bottleneck_dims', type=int, default=16,
-                        help='Size ot the Autoencoder Bottleneck.')
-    parser.add_argument('--encoder_width', type=int, default=128,
-                        help='Dimensions of the encoders hidden layers.')
-    parser.add_argument('--decoder_width', type=int, default=512,
-                        help='Dimensions of the decoders hidden layers.')
-    parser.add_argument('--crop_length', type=int, default=6144)
-    main(parser.parse_args())
+    main(make_config().parse_args())
