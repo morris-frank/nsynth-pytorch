@@ -107,7 +107,7 @@ class WaveNetDecoder(nn.Module):
             skip = skip + l_skip(pre_res)
 
         skip = self.final_skip(skip)
-        skip = skip + self._condition(skip, self.final_cond(embedding),
+        skip = self._condition(skip, self.final_cond(embedding),
                                       self.scale_factor)
         quant_skip = self.final_quant(skip)
         return quant_skip
