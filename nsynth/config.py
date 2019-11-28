@@ -1,9 +1,10 @@
+from os import path
 from argparse import ArgumentParser
 
 
 def make_config() -> ArgumentParser:
     parser = ArgumentParser()
-    parser.add_argument('--datadir', type=str, required=True,
+    parser.add_argument('--datadir', type=path.abspath, required=True,
                         help='The top-level directory of NSynth dataset '
                              '(containing the split directories.)')
 
@@ -25,7 +26,7 @@ def make_config() -> ArgumentParser:
                           help='Frequency of model checkpoints.')
     args_log.add_argument('--ittest', type=int, default=1000,
                           help='Frequency of running the test set.')
-    args_log.add_argument('--savedir', type=str, default='./models/',
+    args_log.add_argument('--savedir', type=path.abspath, default='./models/',
                           help='The path to save the checkpoints to.')
 
     args_model = parser.add_argument_group('Model options')
