@@ -28,6 +28,8 @@ def make_config() -> ArgumentParser:
                           help='Frequency of running the test set.')
     args_log.add_argument('--savedir', type=path.abspath, default='./models/',
                           help='The path to save the checkpoints to.')
+    args_log.add_argument('--board', action='store_true', default=False,
+                          help='Whether to use Tensorboard.')
 
     args_model = parser.add_argument_group('Model options')
     args_model.add_argument('--bottleneck_dims', type=int, default=16,

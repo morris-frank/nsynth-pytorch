@@ -14,8 +14,23 @@ from .scheduler import ManualMultiStepLR
 
 
 def train(model: nn.Module, gpu: List[int], data_dir: str, save_dir: str,
-          n_batch: int, n_it: int, it_print: int, it_save: int, it_test: int,
-          crop: int):
+          crop: int, n_batch: int, n_it: int, it_print: int, it_save: int, it_test: int,
+          use_board: bool):
+    """
+
+    :param model: The WaveNet model Module
+    :param gpu: List of GPUs to use (int indexes)
+    :param data_dir: Path to training data
+    :param save_dir: Path to save the model to
+    :param crop: Size of the random training sample crops
+    :param n_batch: Size of mini-batch
+    :param n_it: Number of iterations
+    :param it_print: Frequency of printing stats
+    :param it_save: Frequency of saving the model
+    :param it_test: Frequency of testing the model
+    :param use_board: Whether to use tensorboard
+    :return:
+    """
     # Move model to device(s):
     device = f'cuda:{gpu[0]}' if gpu else 'cpu'
     if gpu:
@@ -35,6 +50,9 @@ def train(model: nn.Module, gpu: List[int], data_dir: str, save_dir: str,
     # test_set = AudioOnlyNSynthDataset(data_dir, subset='test')
 
     # Setup logging and save stuff
+    if use_board:
+        from torch.utils.tensorboard import SummaryWriter
+        writer = SummaryWriter()
     os.makedirs(save_dir, exist_ok=True)
     save_path = f'{save_dir}/{datetime.today():%Y-%m-%d_%H}_NSynth.pt'
     losses = []
@@ -53,11 +71,13 @@ def train(model: nn.Module, gpu: List[int], data_dir: str, save_dir: str,
             scheduler.step()
 
             losses.append(loss.detach().item())
+            if use_board:
+                writer.add_scalar('Loss/train', losses[-1], (epoch+1) * it)
             if it % it_print == 0:
                 print(f'it={it:>10}\tloss:{mean(losses[-it_print:]):.3e}\t'
                       f'time/it:{(time.time() - epoch_time) / (it + 1)}')
 
-            if False and it % it_save == 0:
+            if it % it_save == 0:
                 torch.save({
                     'epoch': epoch,
                     'model_state_dict': model.state_dict(),
