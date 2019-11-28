@@ -3,7 +3,6 @@ from itertools import product
 import torch
 from torch import nn
 
-from .functional import encode_μ_law
 from .modules import BlockWiseConv1d
 
 
@@ -15,8 +14,8 @@ class TemporalEncoder(nn.Module):
 
     def __init__(self,
                  channels: int = 1,
-                 n_layers: int = 3,
-                 n_blocks: int = 10,
+                 n_layers: int = 10,
+                 n_blocks: int = 3,
                  width: int = 128,
                  kernel_size: int = 3,
                  bottleneck_dims: int = 16,
