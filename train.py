@@ -8,7 +8,8 @@ from torch import nn
 from torch import optim
 from torch.utils import data
 
-from nsynth import WaveNetAutoencoder, AudioOnlyNSynthDataset, ManualMultiStepLR
+from nsynth import WaveNetAutoencoder, ManualMultiStepLR
+from nsynth.data import AudioOnlyNSynthDataset
 
 
 def main(args):
