@@ -1,6 +1,8 @@
 import json
 import os
+import random
 from glob import glob
+from typing import Optional
 
 import librosa
 import torch
@@ -70,15 +72,20 @@ class NSynthDataset(data.Dataset):
 
 
 class AudioOnlyNSynthDataset(NSynthDataset):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, crop: Optional[int] = None, **kwargs):
         super(AudioOnlyNSynthDataset, self).__init__(*args, **kwargs)
+        self.crop = crop
 
     def __getitem__(self, item: int):
         attrs = super(AudioOnlyNSynthDataset, self).__getitem__(item)
+        # Make a random crop if given
+        if self.crop:
+            pivot = random.randint(0, attrs['audio'].shape[1] - self.crop)
+            attrs['audio'] = attrs['audio'][:, pivot:pivot + self.crop]
         # μ-Law gives us range [-128, 128]
         # Input is in range [-1, 1]
         # The loss CrossEntropy Targets are range [0, 255]
         audio = encode_μ_law(attrs['audio'])
         audio_scaled = audio / 128
-        audio_target = (audio + 128).long()
+        audio_target = (audio.squeeze() + 128).long()
         return audio_scaled, audio_target

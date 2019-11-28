@@ -42,6 +42,8 @@ class WaveNetDecoder(nn.Module):
         super(WaveNetDecoder, self).__init__()
         self.width = width
         self.n_stages, self.n_layers = n_blocks, n_layers
+        # The compound dilation (input to last layer in each block):
+        self.scale_factor = 2 ** (n_layers - 1)
 
         self.initial_dilation = BlockWiseConv1d(in_channels=channels,
                                                 out_channels=width,
@@ -95,21 +97,23 @@ class WaveNetDecoder(nn.Module):
         layers = (self.dilations, self.conds, self.residuals, self.skips)
         for l_dilation, l_cond, l_residual, l_skip in zip(*layers):
             dilated = l_dilation(x)
-            dilated = self._condition(dilated, l_cond(embedding))
+            dilated = self._condition(dilated, l_cond(embedding),
+                                      self.scale_factor)
             filters = torch.sigmoid(dilated[:, :self.width, :])
             gates = torch.tanh(dilated[:, self.width:, :])
             pre_res = filters * gates
 
-            x += l_residual(pre_res)
-            skip += l_skip(pre_res)
+            x = x + l_residual(pre_res)
+            skip = skip + l_skip(pre_res)
 
         skip = self.final_skip(skip)
-        skip += self.final_cond(embedding)
+        skip = skip + self._condition(skip, self.final_cond(embedding),
+                                      self.scale_factor)
         quant_skip = self.final_quant(skip)
         return quant_skip
 
     @staticmethod
-    def _condition(x, c):
-        cond = nn.Upsample(scale_factor=512, mode='nearest')(c)
+    def _condition(x, c, scale):
+        cond = nn.Upsample(scale_factor=scale, mode='nearest')(c)
         x = x + cond
         return x
