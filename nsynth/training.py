@@ -1,7 +1,7 @@
 import os
 import time
 from statistics import mean
-from typing import List
+from typing import List, Dict
 
 import torch
 from torch import nn
@@ -28,20 +28,17 @@ def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
 
 
 def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
-          testset: data.DataLoader, save_dir: str, n_it: int, it_print: int,
-          it_save: int, it_test: int, use_board: bool,
-          use_manual_scheduler: bool):
+          testset: data.DataLoader, paths: Dict, iterpoints: Dict, n_it: int,
+          use_board: bool, use_manual_scheduler: bool):
     """
 
     :param model: The WaveNet model Module
     :param gpu: List of GPUs to use (int indexes)
     :param trainset: The dataset for training data
     :param testset: the dataset for testing data
-    :param save_dir: Path to save the model to
+    :param paths: The paths to save and  log to
+    :param iterpoints: The number of iterations to print, save and test
     :param n_it: Number of iterations
-    :param it_print: Frequency of printing stats
-    :param it_save: Frequency of saving the model
-    :param it_test: Frequency of testing the model
     :param use_board: Whether to use tensorboard
     :param use_manual_scheduler: Whether to use the original manual scheduler
     :return:
@@ -61,8 +58,8 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
     if use_board:
         from torch.utils.tensorboard import SummaryWriter
         writer = SummaryWriter()
-    os.makedirs(save_dir, exist_ok=True)
-    save_path = f'{save_dir}/{{}}_NSynth.pt'
+    os.makedirs(paths['save'], exist_ok=True)
+    save_path = f'{paths["save"]}/{{}}_NSynth.pt'
     losses = []
     iloader = iter(trainset)
     print_time = time.time()
@@ -86,10 +83,10 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
         losses.append(loss.detach().item())
 
         # LOG INFO
-        if it % it_print == 0:
+        if it % iterpoints['print'] == 0:
             mean_loss = mean(losses)
             losses = []
-            mean_time = (time.time() - print_time) / it_print
+            mean_time = (time.time() - print_time) / iterpoints['print']
             print_time = time.time()
             print(f'it={it:>10}\tloss:{mean_loss:.3e}\t'
                   f'time/it:{mean_time}')
@@ -98,7 +95,7 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
                 writer.add_scalar('Mean Time', mean_time, it)
 
         # SAVE THE MODEL
-        if it % it_save == 0:
+        if it % iterpoints['save'] == 0:
             torch.save({
                 'it': it,
                 'model_state_dict': model.state_dict(),
@@ -107,7 +104,7 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
             }, save_path.format(it))
 
         # TEST THE MODEL
-        if it % it_test == 0:
+        if it % iterpoints['test'] == 0:
             test_losses = []
             model.eval()
             for x, y in testset:

@@ -26,11 +26,10 @@ def main(args):
           gpu=args.gpu,
           trainset=dsets['train'],
           testset=dsets['test'],
-          save_dir=args.savedir,
+          paths={'save': args.savedir, 'log': args.logdir},
+          iterpoints={'print': args.itprint, 'save': args.itsave,
+                      'test': args.ittest},
           n_it=args.nit,
-          it_print=args.itprint,
-          it_save=args.itsave,
-          it_test=args.ittest,
           use_board=args.board,
           use_manual_scheduler=args.original_lr_scheduler
           )

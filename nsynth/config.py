@@ -37,6 +37,8 @@ def make_config() -> ArgumentParser:
                           help='Frequency of running the test set.')
     args_log.add_argument('--savedir', type=path.abspath, default='./models/',
                           help='The path to save the checkpoints to.')
+    args_log.add_argument('--logdir', type=path.abspath, default='./log/',
+                          help='The path to save the logs to.')
     args_log.add_argument('--board', action='store_true',
                           help='Whether to use Tensorboard.')
 
