@@ -1,8 +1,8 @@
 import json
-import os
 import random
 from glob import glob
-from typing import Optional
+from os import path
+from typing import Optional, List
 
 import librosa
 import torch
@@ -18,11 +18,15 @@ class NSynthDataset(data.Dataset):
     """
 
     def __init__(self, root: str, subset: str = 'train',
+                 families: Optional[List[str]] = None,
+                 sources: Optional[List[str]] = None,
                  dtype: torch_dtype = torch.float32, mono: bool = True):
         """
         :param root: The path to the dataset. Should contain the sub-folders
             for the splits as extracted from the .tar.gz.
         :param subset: The subset to use.
+        :param families: Only keep those Instrument families
+        :param sources: Only keep those instrument sources
         :param dtype: The data type to output for the audio signals.
         :param mono: Whether to use mono signal instead of stereo.
         """
@@ -30,14 +34,19 @@ class NSynthDataset(data.Dataset):
         self.subset = subset.lower()
         self.mono = mono
 
+        if isinstance(families, str):
+            families = [families]
+        if isinstance(sources, str):
+            sources = [sources]
+
         assert self.subset in ['valid', 'test', 'train']
 
-        self.root = os.path.normpath(f'{root}/nsynth-{subset}')
-        if not os.path.isdir(self.root):
+        self.root = path.normpath(f'{root}/nsynth-{subset}')
+        if not path.isdir(self.root):
             raise ValueError('The given root path is not a directory.'
                              f'\nI got {self.root}')
 
-        if not os.path.isfile(f'{self.root}/examples.json'):
+        if not path.isfile(f'{self.root}/examples.json'):
             raise ValueError('The given root path does not contain an'
                              'examples.json')
 
@@ -46,10 +55,19 @@ class NSynthDataset(data.Dataset):
         with open(f'{self.root}/examples.json', 'r') as fp:
             self.attrs = json.load(fp)
 
+        if families:
+            self.attrs = {k: a for k, a in self.attrs.items()
+                          if a['instrument_family_str'] in families}
+        if sources:
+            self.attrs = {k: a for k, a in self.attrs.items()
+                          if a['instrument_source_str'] in sources}
+
         print(f'\tFound {len(self)} samples.')
 
-        for file in glob(f'{self.root}/audio/*.wav'):
-            assert os.path.basename(file)[:-4] in self.attrs
+        files_on_disk = set(map(lambda x: path.basename(x)[:-4],
+                                glob(f'{self.root}/audio/*.wav')))
+        if not set(self.attrs) <= files_on_disk:
+            raise FileNotFoundError
 
         self.names = list(self.attrs.keys())
 
