@@ -11,13 +11,16 @@ def make_config() -> ArgumentParser:
     args_train = parser.add_argument_group('Training options')
     args_train.add_argument('--gpu', type=int, required=False, nargs='+',
                             help='The GPU ids to use. If unset, will use CPU.')
-    args_train.add_argument('--nit', type=int, default=200000,
+    args_train.add_argument('--nit', type=int, default=250000,
                             help='Number of batches to train for.')
     args_train.add_argument('--nbatch', type=int, default=32,
                             help='The batch size.')
     args_train.add_argument('--crop_length', type=int, default=6144,
                             help='Length of the actual training sub-samples'
                                  '(crops).')
+    args_train.add_argument('--original_lr_scheduler', action='store_true',
+                            help='Use the original exact learning rate '
+                                 'schedule as given in the paper.')
 
     args_log = parser.add_argument_group('Logging options')
     args_log.add_argument('--itprint', type=int, default=10,
@@ -28,7 +31,7 @@ def make_config() -> ArgumentParser:
                           help='Frequency of running the test set.')
     args_log.add_argument('--savedir', type=path.abspath, default='./models/',
                           help='The path to save the checkpoints to.')
-    args_log.add_argument('--board', action='store_true', default=False,
+    args_log.add_argument('--board', action='store_true',
                           help='Whether to use Tensorboard.')
 
     args_model = parser.add_argument_group('Model options')

@@ -15,7 +15,7 @@ from .scheduler import ManualMultiStepLR
 
 def train(model: nn.Module, gpu: List[int], data_dir: str, save_dir: str,
           crop: int, n_batch: int, n_it: int, it_print: int, it_save: int,
-          it_test: int, use_board: bool):
+          it_test: int, use_board: bool, use_manual_scheduler: bool):
     """
 
     :param model: The WaveNet model Module
@@ -29,6 +29,7 @@ def train(model: nn.Module, gpu: List[int], data_dir: str, save_dir: str,
     :param it_save: Frequency of saving the model
     :param it_test: Frequency of testing the model
     :param use_board: Whether to use tensorboard
+    :param use_manual_scheduler: Whether to use the original manual scheduler
     :return:
     """
     # Move model to device(s):
@@ -37,10 +38,17 @@ def train(model: nn.Module, gpu: List[int], data_dir: str, save_dir: str,
         model = nn.DataParallel(model.to(device), device_ids=gpu)
 
     # Setup optimizer and learning rate scheduler
-    optimizer = optim.Adam(model.parameters(), eps=1e-8)
-    lr_milestones = [0, 90000, 120000, 150000, 180000, 210000, 240000]
-    lr_gammas = [2e-4, 4e-4 / 3, 6e-5, 4e-5, 2e-5, 6e-6, 2e-6]
-    scheduler = ManualMultiStepLR(optimizer, lr_milestones, lr_gammas)
+    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=2e-4)
+    if use_manual_scheduler:
+        lr_milestones = [0, 90000, 120000, 150000, 180000, 210000, 240000]
+        lr_gammas = [2e-4, 4e-4 / 3, 6e-5, 4e-5, 2e-5, 6e-6, 2e-6]
+        scheduler = ManualMultiStepLR(optimizer, lr_milestones, lr_gammas)
+    else:
+        # For the automatic scheduler we approximate the manual scheduler
+        # with a step LR based on the n_it:
+        lr_milestones = torch.linspace(n_it * 0.36, n_it, 5).tolist()
+        scheduler = optim.lr_scheduler.MultiStepLR(optimizer, lr_milestones,
+                                                   gamma=0.6)
 
     cross_entropy = nn.CrossEntropyLoss()
 

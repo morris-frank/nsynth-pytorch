@@ -5,6 +5,8 @@ from nsynth.training import train
 
 def main(args):
     # Build model
+    print(args)
+    exit()
     model = WaveNetAutoencoder(bottleneck_dims=args.bottleneck_dims,
                                encoder_width=args.encoder_width,
                                decoder_width=args.decoder_width,
@@ -13,7 +15,8 @@ def main(args):
     train(model=model, gpu=args.gpu, data_dir=args.datadir,
           save_dir=args.savedir, crop=args.crop_length, n_batch=args.nbatch,
           n_it=args.nit, it_print=args.itprint, it_save=args.itsave,
-          it_test=args.ittest, use_board=args.board)
+          it_test=args.ittest, use_board=args.board,
+          use_manual_scheduler=args.original_lr_scheduler)
 
 
 if __name__ == '__main__':
