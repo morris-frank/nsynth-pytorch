@@ -12,6 +12,7 @@ from torch import optim
 from torch.optim.optimizer import Optimizer
 from torch.utils import data
 
+from .autoencoder import WaveNetAutoencoder
 from .scheduler import ManualMultiStepLR
 
 
@@ -30,7 +31,7 @@ def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
     return scheduler
 
 
-def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
+def train(model: WaveNetAutoencoder, gpu: List[int], trainset: data.DataLoader,
           testset: data.DataLoader, paths: Dict, iterpoints: Dict, n_it: int,
           use_board: bool, use_manual_scheduler: bool):
     """
@@ -55,8 +56,6 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
     optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=2e-4)
     scheduler = _setup_scheduler(optimizer, use_manual_scheduler, n_it)
 
-    cross_entropy = nn.CrossEntropyLoss()
-
     # Setup logging and save stuff
     if use_board:
         from torch.utils.tensorboard import SummaryWriter
@@ -77,7 +76,7 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
 
         model.train()
         logits = model(x)
-        loss = cross_entropy(logits, y.to(device))
+        loss = model.loss_function(logits, y.to(device))
         model.zero_grad()
         loss.backward()
         optimizer.step()
@@ -119,9 +118,10 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
             test_time = time.time()
             for x, y in testset:
                 logits = model(x)
-                loss = cross_entropy(logits, y.to(device))
+                loss = model.loss_function(logits, y.to(device))
 
                 if use_board:
+                    # ADD LR plot
                     _cm_step += 1
                     test_losses.append(loss.detach().item())
                     cm_y = np.append(cm_y, y.cpu().numpy().flatten())
@@ -143,6 +143,6 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
                 np.save('conufsion_matrix.np', confusion_matrix)
                 writer.add_scalar('Loss/test', mean_test_loss, it)
                 writer.add_figure("Class confusion", confusion_fig, it)
-                writer.add_scalar('Mean Time/test', mean_test_time)
+                writer.add_scalar('Mean Time/test', mean_test_time, it)
 
     print(f'FINISH {n_it} mini-batches')

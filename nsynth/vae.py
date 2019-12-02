@@ -1,12 +1,13 @@
 import torch
-from torch import nn
+from torch import distributions as dist
 from torch.nn import functional as F
 
+from .autoencoder import WaveNetAutoencoder
 from .decoder import WaveNetDecoder
 from .encoder import TemporalEncoder
 
 
-class WaveNetAutoencoder(nn.Module):
+class WaveNetVariationalAutoencoder(WaveNetAutoencoder):
     """
     The complete WaveNetAutoEncoder model.
     """
@@ -21,23 +22,31 @@ class WaveNetAutoencoder(nn.Module):
             (WaveNet).
         :param channels: Number of input channels.
         """
-        super(WaveNetAutoencoder, self).__init__()
-        self.encoder = TemporalEncoder(bottleneck_dims=bottleneck_dims,
+        super(WaveNetVariationalAutoencoder, self).__init__()
+        self.bottleneck_dims = bottleneck_dims
+        self.encoder = TemporalEncoder(bottleneck_dims=2 * bottleneck_dims,
                                        channels=channels, width=encoder_width)
         self.decoder = WaveNetDecoder(bottleneck_dims=bottleneck_dims,
                                       channels=channels, width=decoder_width)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         embedding = self.encoder(x)
+        q_loc = embedding[:, :self.bottleneck_dims, :]
+        q_scale = embedding[:, self.bottleneck_dims:, :]
+
+        self.q = dist.Normal(q_loc, q_scale)
+        self.x_q = self.q.rsample()
+
         output = self.decoder(x, embedding)
         return output
 
     def loss_function(self, logits: torch.Tensor,
                       targets: torch.Tensor) -> torch.Tensor:
-        """
-        Computes the loss
-        :param logits: Predicted logits
-        :param targets: the ground truth targets
-        :return: the single loss
-        """
-        return F.cross_entropy(logits, targets)
+        CE_x = F.cross_entropy(logits, targets)
+        zx_p_loc, zx_p_scale = torch.zeros(logits.size()[0],
+                                           self.bottleneck_dims).cuda(), \
+                               torch.ones(logits.size()[0],
+                                          self.bottleneck_dims).cuda()
+        pzx = dist.Normal(zx_p_loc, zx_p_scale)
+        KL_zx = torch.sum(pzx.log_prob(self.x_q) - self.q.log_prob(self.x_q))
+        return CE_x - KL_zx

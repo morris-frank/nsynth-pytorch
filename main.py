@@ -1,31 +1,23 @@
-from torch.utils import data
-from nsynth import WaveNetAutoencoder
-from nsynth.config import make_config
-from nsynth.training import train
-from nsynth.data import AudioOnlyNSynthDataset
+from nsynth import WaveNetAutoencoder, WaveNetVariationalAutoencoder,\
+    make_config, train
+from nsynth.data import make_loaders
 
 
 def main(args):
+    wavenet = WaveNetVariationalAutoencoder if args.vae else WaveNetAutoencoder
     # Build model
-    model = WaveNetAutoencoder(bottleneck_dims=args.bottleneck_dims,
-                               encoder_width=args.encoder_width,
-                               decoder_width=args.decoder_width,
-                               channels=1)
+    model = wavenet(
+        bottleneck_dims=args.bottleneck_dims,
+        encoder_width=args.encoder_width, decoder_width=args.decoder_width)
 
     # Build datasets
-    dsets = dict()
-    for subset in ['train', 'test']:
-        dset = AudioOnlyNSynthDataset(root=args.datadir, subset=subset,
-                                      families=args.families,
-                                      sources=args.sources,
-                                      crop=args.crop_length)
-        dsets[subset] = data.DataLoader(dset, batch_size=args.nbatch,
-                                        num_workers=8, shuffle=True)
+    loaders = make_loaders(args.datadir, ['train', 'test'], args.nbatch,
+                           args.crop_length, args.families, args.sources)
 
     train(model=model,
           gpu=args.gpu,
-          trainset=dsets['train'],
-          testset=dsets['test'],
+          trainset=loaders['train'],
+          testset=loaders['test'],
           paths={'save': args.savedir, 'log': args.logdir},
           iterpoints={'print': args.itprint, 'save': args.itsave,
                       'test': args.ittest},

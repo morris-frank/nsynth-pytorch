@@ -33,7 +33,7 @@ def make_config() -> ArgumentParser:
                           help='Frequency of loss print.')
     args_log.add_argument('--itsave', type=int, default=1000,
                           help='Frequency of model checkpoints.')
-    args_log.add_argument('--ittest', type=int, default=2000,
+    args_log.add_argument('--ittest', type=int, default=500,
                           help='Frequency of running the test set.')
     args_log.add_argument('--savedir', type=path.abspath, default='./models/',
                           help='The path to save the checkpoints to.')
@@ -49,4 +49,6 @@ def make_config() -> ArgumentParser:
                             help='Dimensions of the encoders hidden layers.')
     args_model.add_argument('--decoder_width', type=int, default=512,
                             help='Dimensions of the decoders hidden layers.')
+    args_model.add_argument('--vae', action='store_true',
+                            help='Whether to use the VAE model.')
     return parser

@@ -2,7 +2,7 @@ import json
 import random
 from glob import glob
 from os import path
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 import librosa
 import torch
@@ -107,3 +107,27 @@ class AudioOnlyNSynthDataset(NSynthDataset):
         audio_scaled = audio / 128
         audio_target = (audio.squeeze() + 128).long()
         return audio_scaled, audio_target
+
+
+def make_loaders(data_dir: str, subsets: List[str], nbatch: int,
+                 crop: int = 6144, families: Optional[List[str]] = None,
+                 sources: Optional[List[str]] = None) \
+        -> Dict[str, data.DataLoader]:
+    """
+    Make a dictionary of data loaders for the given subsets.
+    :param data_dir: Location of the Dataset
+    :param subsets: subsets to make datasets for
+    :param nbatch: batch size
+    :param crop: length  of the cropped samples
+    :param families: families of instruments to select
+    :param sources: sources of instruments to select
+    :return:
+    """
+    data_loaders = dict()
+    for subset in subsets:
+        dset = AudioOnlyNSynthDataset(root=data_dir, subset=subset,
+                                      families=families, sources=sources,
+                                      crop=crop)
+        data_loaders[subset] = data.DataLoader(
+            dset, batch_size=nbatch, num_workers=8, shuffle=True)
+    return data_loaders

@@ -6,6 +6,9 @@ from torch import nn
 from .modules import BlockWiseConv1d
 
 
+# TODO: INITIALIZATION
+
+
 class TemporalEncoder(nn.Module):
     """
     The Non-Causal Temporal Encoder as described in original NSynth

@@ -7,6 +7,9 @@ from .functional import shift1d
 from .modules import BlockWiseConv1d
 
 
+# TODO: INITIALIZATION
+
+
 class WaveNetDecoder(nn.Module):
     """
     WaveNet as described NSynth [http://arxiv.org/abs/1704.01279].
