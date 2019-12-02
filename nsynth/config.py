@@ -1,5 +1,5 @@
-from os import path
 from argparse import ArgumentParser
+from os import path
 
 
 def make_config() -> ArgumentParser:
@@ -21,13 +21,19 @@ def make_config() -> ArgumentParser:
     args_train.add_argument('--original_lr_scheduler', action='store_true',
                             help='Use the original exact learning rate '
                                  'schedule as given in the paper.')
+    args_train.add_argument('--families', type=str, required=False, nargs='+',
+                            help='The instrument families to use from the '
+                                 'dataset.')
+    args_train.add_argument('--sources', type=str, required=False, nargs='+',
+                            help='The instrument sources to use from the '
+                                 'dataset.')
 
     args_log = parser.add_argument_group('Logging options')
     args_log.add_argument('--itprint', type=int, default=10,
                           help='Frequency of loss print.')
     args_log.add_argument('--itsave', type=int, default=1000,
                           help='Frequency of model checkpoints.')
-    args_log.add_argument('--ittest', type=int, default=1000,
+    args_log.add_argument('--ittest', type=int, default=2000,
                           help='Frequency of running the test set.')
     args_log.add_argument('--savedir', type=path.abspath, default='./models/',
                           help='The path to save the checkpoints to.')

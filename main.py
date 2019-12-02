@@ -1,22 +1,39 @@
+from torch.utils import data
 from nsynth import WaveNetAutoencoder
 from nsynth.config import make_config
 from nsynth.training import train
+from nsynth.data import AudioOnlyNSynthDataset
 
 
 def main(args):
     # Build model
-    print(args)
-    exit()
     model = WaveNetAutoencoder(bottleneck_dims=args.bottleneck_dims,
                                encoder_width=args.encoder_width,
                                decoder_width=args.decoder_width,
                                channels=1)
 
-    train(model=model, gpu=args.gpu, data_dir=args.datadir,
-          save_dir=args.savedir, crop=args.crop_length, n_batch=args.nbatch,
-          n_it=args.nit, it_print=args.itprint, it_save=args.itsave,
-          it_test=args.ittest, use_board=args.board,
-          use_manual_scheduler=args.original_lr_scheduler)
+    # Build datasets
+    dsets = dict()
+    for subset in ['train', 'test']:
+        dset = AudioOnlyNSynthDataset(root=args.datadir, subset=subset,
+                                      families=args.families,
+                                      sources=args.sources,
+                                      crop=args.crop_length)
+        dsets[subset] = data.DataLoader(dset, batch_size=args.nbatch,
+                                        num_workers=8, shuffle=True)
+
+    train(model=model,
+          gpu=args.gpu,
+          trainset=dsets['train'],
+          testset=dsets['test'],
+          save_dir=args.savedir,
+          n_it=args.nit,
+          it_print=args.itprint,
+          it_save=args.itsave,
+          it_test=args.ittest,
+          use_board=args.board,
+          use_manual_scheduler=args.original_lr_scheduler
+          )
 
 
 if __name__ == '__main__':
