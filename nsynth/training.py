@@ -13,6 +13,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils import data
 
 from .autoencoder import WaveNetAutoencoder
+from .vae import WaveNetVariationalAutoencoder
 from .scheduler import ManualMultiStepLR
 
 
@@ -31,7 +32,7 @@ def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
     return scheduler
 
 
-def train(model: WaveNetAutoencoder, gpu: List[int], trainset: data.DataLoader,
+def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
           testset: data.DataLoader, paths: Dict, iterpoints: Dict, n_it: int,
           use_board: bool, use_manual_scheduler: bool):
     """
@@ -47,6 +48,7 @@ def train(model: WaveNetAutoencoder, gpu: List[int], trainset: data.DataLoader,
     :param use_manual_scheduler: Whether to use the original manual scheduler
     :return:
     """
+    is_vae = isinstance(model, WaveNetVariationalAutoencoder)
     # Move model to device(s):
     device = f'cuda:{gpu[0]}' if gpu else 'cpu'
     if gpu:
@@ -75,8 +77,13 @@ def train(model: WaveNetAutoencoder, gpu: List[int], trainset: data.DataLoader,
             x, y = next(iloader)
 
         model.train()
-        logits = model(x)
-        loss = model.loss_function(logits, y.to(device))
+        if is_vae:
+            logits, q, x_q = model(x)
+            loss = WaveNetVariationalAutoencoder.loss_function(logits, q, x_q,
+                                                               y.to(device))
+        else:
+            logits = model(x)
+            loss = WaveNetAutoencoder.loss_function(logits, y.to(device))
         model.zero_grad()
         loss.backward()
         optimizer.step()
@@ -117,8 +124,16 @@ def train(model: WaveNetAutoencoder, gpu: List[int], trainset: data.DataLoader,
 
             test_time = time.time()
             for x, y in testset:
-                logits = model(x)
-                loss = model.loss_function(logits, y.to(device))
+                if is_vae:
+                    logits, q, x_q = model(x)
+                    loss = WaveNetVariationalAutoencoder.loss_function(logits,
+                                                                       q, x_q,
+                                                                       y.to(
+                                                                           device))
+                else:
+                    logits = model(x)
+                    loss = WaveNetAutoencoder.loss_function(logits,
+                                                            y.to(device))
 
                 if use_board:
                     # ADD LR plot

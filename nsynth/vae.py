@@ -1,13 +1,15 @@
+from typing import Tuple
+
 import torch
 from torch import distributions as dist
+from torch import nn
 from torch.nn import functional as F
 
-from .autoencoder import WaveNetAutoencoder
 from .decoder import WaveNetDecoder
 from .encoder import TemporalEncoder
 
 
-class WaveNetVariationalAutoencoder(WaveNetAutoencoder):
+class WaveNetVariationalAutoencoder(nn.Module):
     """
     The complete WaveNetAutoEncoder model.
     """
@@ -29,24 +31,24 @@ class WaveNetVariationalAutoencoder(WaveNetAutoencoder):
         self.decoder = WaveNetDecoder(bottleneck_dims=bottleneck_dims,
                                       channels=channels, width=decoder_width)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor) \
+            -> Tuple[torch.Tensor, dist.Normal, torch.Tensor]:
         embedding = self.encoder(x)
         q_loc = embedding[:, :self.bottleneck_dims, :]
         q_scale = embedding[:, self.bottleneck_dims:, :]
 
-        self.q = dist.Normal(q_loc, q_scale)
-        self.x_q = self.q.rsample()
+        q = dist.Normal(q_loc, q_scale)
+        x_q = q.rsample()
 
-        output = self.decoder(x, embedding)
-        return output
+        output = self.decoder(x, x_q)
+        return output, q, x_q
 
-    def loss_function(self, logits: torch.Tensor,
-                      targets: torch.Tensor) -> torch.Tensor:
-        CE_x = F.cross_entropy(logits, targets)
-        zx_p_loc, zx_p_scale = torch.zeros(logits.size()[0],
-                                           self.bottleneck_dims).cuda(), \
-                               torch.ones(logits.size()[0],
-                                          self.bottleneck_dims).cuda()
+    @staticmethod
+    def loss_function(logits: torch.Tensor, q: dist.Normal,
+                      x_q: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+        ce_x = F.cross_entropy(logits, targets)
+        zx_p_loc, zx_p_scale = torch.zeros(x_q.size()).cuda(), \
+                               torch.ones(x_q.size()).cuda()
         pzx = dist.Normal(zx_p_loc, zx_p_scale)
-        KL_zx = torch.sum(pzx.log_prob(self.x_q) - self.q.log_prob(self.x_q))
-        return CE_x - KL_zx
+        kl_zx = torch.sum(pzx.log_prob(x_q) - q.log_prob(x_q))
+        return ce_x - kl_zx

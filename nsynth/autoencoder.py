@@ -32,7 +32,8 @@ class WaveNetAutoencoder(nn.Module):
         output = self.decoder(x, embedding)
         return output
 
-    def loss_function(self, logits: torch.Tensor,
+    @staticmethod
+    def loss_function(logits: torch.Tensor,
                       targets: torch.Tensor) -> torch.Tensor:
         """
         Computes the loss
