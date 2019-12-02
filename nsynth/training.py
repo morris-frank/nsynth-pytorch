@@ -1,9 +1,12 @@
 import os
 import time
+from datetime import datetime
 from statistics import mean
 from typing import List, Dict
 
+import numpy as np
 import torch
+from sklearn import metrics
 from torch import nn
 from torch import optim
 from torch.optim.optimizer import Optimizer
@@ -57,14 +60,14 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
     # Setup logging and save stuff
     if use_board:
         from torch.utils.tensorboard import SummaryWriter
+        from .visualization import plot_confusion_matrix
         writer = SummaryWriter()
     os.makedirs(paths['save'], exist_ok=True)
-    save_path = f'{paths["save"]}/{{}}_NSynth.pt'
-    losses = []
+    save_path = f'{paths["save"]}/{datetime.today():%y%m%d}_{{}}_NSynth.pt'
+    losses, it_times = [], []
     iloader = iter(trainset)
-    print_time = time.time()
-
     for it in range(n_it):
+        it_start_time = time.time()
         # Load next random batch
         try:
             x, y = next(iloader)
@@ -81,18 +84,18 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
         scheduler.step()
 
         losses.append(loss.detach().item())
+        it_times.append(time.time() - it_start_time)
 
         # LOG INFO
         if it % iterpoints['print'] == 0:
             mean_loss = mean(losses)
-            losses = []
-            mean_time = (time.time() - print_time) / iterpoints['print']
-            print_time = time.time()
+            mean_time = mean(it_times)
+            losses, it_times = [], []
             print(f'it={it:>10}\tloss:{mean_loss:.3e}\t'
                   f'time/it:{mean_time}')
             if use_board:
                 writer.add_scalar('Loss/train', mean_loss, it)
-                writer.add_scalar('Mean Time', mean_time, it)
+                writer.add_scalar('Mean Time/train', mean_time, it)
 
         # SAVE THE MODEL
         if it % iterpoints['save'] == 0:
@@ -107,14 +110,39 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
         if it % iterpoints['test'] == 0:
             test_losses = []
             model.eval()
+
+            if use_board:
+                confusion_matrix = np.zeros((256, 256))
+                cm_y, cm_logits = np.array([]), np.array([])
+                _cm_step = 0
+
+            test_time = time.time()
             for x, y in testset:
                 logits = model(x)
                 loss = cross_entropy(logits, y.to(device))
-                test_losses.append(loss.detach().item())
 
+                if use_board:
+                    _cm_step += 1
+                    test_losses.append(loss.detach().item())
+                    cm_y = np.append(cm_y, y.cpu().numpy().flatten())
+                    cm_logits = np.append(cm_logits,
+                                          logits.detach().cpu().argmax(
+                                              dim=1).numpy().flatten())
+
+                if use_board and _cm_step == 99:
+                    confusion_matrix += metrics.confusion_matrix(
+                        cm_y, cm_logits, labels=list(range(256)))
+                    cm_y, cm_logits, _cm_step = np.array([]), np.array([]), 0
+
+            mean_test_time = time.time() - test_time
             mean_test_loss = mean(test_losses)
-            print(f'TESTING: it={it:>10}\tloss:{mean_test_loss:.3e}\t')
+            print(f'TESTING: it={it:>10}\tloss:{mean_test_loss:.3e}\t'
+                  f'Time: {mean_test_time}')
             if use_board:
+                confusion_fig = plot_confusion_matrix(confusion_matrix)
+                np.save('conufsion_matrix.np', confusion_matrix)
                 writer.add_scalar('Loss/test', mean_test_loss, it)
+                writer.add_figure("Class confusion", confusion_fig, it)
+                writer.add_scalar('Mean Time/test', mean_test_time)
 
     print(f'FINISH {n_it} mini-batches')

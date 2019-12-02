@@ -1,3 +1,5 @@
 librosa>=0.7.1
 torch>=1.3.1
 tensorboard>=2.0.2
+scikit-learn>=0.21.3
+seaborn>=0.9.0Pillow==6.2.1
