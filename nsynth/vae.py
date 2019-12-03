@@ -35,25 +35,26 @@ class WaveNetVariationalAutoencoder(nn.Module):
             -> Tuple[torch.Tensor, dist.Normal, torch.Tensor]:
         embedding = self.encoder(x)
         q_loc = embedding[:, :self.bottleneck_dims, :]
-        q_scale = embedding[:, self.bottleneck_dims:, :]
+        q_scale = F.softplus(embedding[:, self.bottleneck_dims:, :]) + 1e-7
 
         q = dist.Normal(q_loc, q_scale)
         x_q = q.rsample()
+        x_q_log_prob = q.log_prob(x_q)
 
         logits = self.decoder(x, x_q)
-        return logits, q, x_q
+        return logits, x_q, x_q_log_prob
 
     @staticmethod
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
-                      device: str):
-        logits, q, x_q = model(x)
+                      device: str) -> Tuple[torch.Tensor, torch.Tensor]:
+        logits, x_q, x_q_log_prob = model(x)
 
         ce_x = F.cross_entropy(logits, y.to(device))
 
         zx_p_loc = torch.zeros(x_q.size()).to(device)
         zx_p_scale = torch.ones(x_q.size()).to(device)
         pzx = dist.Normal(zx_p_loc, zx_p_scale)
-        kl_zx = torch.sum(pzx.log_prob(x_q) - q.log_prob(x_q))
+        kl_zx = torch.sum(pzx.log_prob(x_q) - x_q_log_prob)
 
         loss = ce_x - kl_zx
         return logits, loss
