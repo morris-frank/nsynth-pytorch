@@ -83,15 +83,18 @@ def log(writer: MonkeyWriter, it: int, values: Dict):
 
     for tag, val in values.items():
         if isinstance(val, float):
-            mess += f'{tag}:{val:.3e}'
+            mess += f'\t{tag}:{val:.3e}'
             writer.add_scalar(tag, val, it)
 
         if isinstance(val, plt.Figure):
             writer.add_figure(tag, val, it)
 
-        if isinstance(val, list):
-            writer.add_histogram(tag, np.array(val), it)
+        if isinstance(val, list) and len(val) > 0:
+            try:
+                writer.add_histogram(tag, np.array(val), it)
+            except ValueError:
+                print('\tEmpty histogram')
             mean_tag, mean_val = f'Mean {tag}', mean(val)
-            mess += f'{mean_tag}:{mean_val:.3e}'
+            mess += f'\t{mean_tag}:{mean_val:.3e}'
             writer.add_scalar(mean_tag, mean_val, it)
     print(mess)

@@ -47,15 +47,6 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
     :param use_manual_scheduler: Whether to use the original manual scheduler
     :return:
     """
-    # Move model to device(s):
-    device = f'cuda:{gpu[0]}' if gpu else 'cpu'
-    if gpu:
-        model = nn.DataParallel(model.to(device), device_ids=gpu)
-
-    # Setup optimizer and learning rate scheduler
-    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=2e-4)
-    scheduler = _setup_scheduler(optimizer, use_manual_scheduler, n_it)
-
     # Setup logging and save stuff
     writer = MonkeyWriter()
     if use_board:
@@ -65,6 +56,15 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
     os.makedirs(paths['save'], exist_ok=True)
     save_path = f'{paths["save"]}/{datetime.today():%y%m%d}_{{:06}}_' \
                 f'{type(model).__name__}.pt'
+
+    # Move model to device(s):
+    device = f'cuda:{gpu[0]}' if gpu else 'cpu'
+    if gpu:
+        model = nn.DataParallel(model.to(device), device_ids=gpu)
+
+    # Setup optimizer and learning rate scheduler
+    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=2e-4)
+    scheduler = _setup_scheduler(optimizer, use_manual_scheduler, n_it)
 
     losses, it_times = [], []
     iloader = iter(trainset)
@@ -91,7 +91,7 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
         if it % iterpoints['print'] == 0:
             log(writer, it, {'Loss/train': losses,
                              'Mean time/train': mean(it_times),
-                             'LR': scheduler.get_lr()[0]})
+                             'LR': optimizer.param_groups[0]['lr']})
             losses, it_times = [], []
 
         # SAVE THE MODEL

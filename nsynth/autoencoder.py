@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -34,8 +36,7 @@ class WaveNetAutoencoder(nn.Module):
 
     @staticmethod
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
-                      device: str):
-        del device
+                      device: str) -> Tuple[torch.Tensor, torch.Tensor]:
         logits = model(x)
-        loss = F.cross_entropy(logits, y)
+        loss = F.cross_entropy(logits, y.to(device))
         return logits, loss
