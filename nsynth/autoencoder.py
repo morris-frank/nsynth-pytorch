@@ -33,12 +33,7 @@ class WaveNetAutoencoder(nn.Module):
         return output
 
     @staticmethod
-    def loss_function(logits: torch.Tensor,
-                      targets: torch.Tensor) -> torch.Tensor:
-        """
-        Computes the loss
-        :param logits: Predicted logits
-        :param targets: the ground truth targets
-        :return: the single loss
-        """
-        return F.cross_entropy(logits, targets)
+    def loss_function(model: nn.Module, x: torch.Tensor, targets: torch.Tensor):
+        logits = model(x)
+        loss = F.cross_entropy(logits, targets)
+        return logits, loss

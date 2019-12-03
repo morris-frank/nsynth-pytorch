@@ -2,19 +2,16 @@ import os
 import time
 from datetime import datetime
 from statistics import mean
-from typing import List, Dict
+from typing import List, Dict, Callable
 
-import numpy as np
 import torch
-from sklearn import metrics
 from torch import nn
 from torch import optim
 from torch.optim.optimizer import Optimizer
 from torch.utils import data
 
-from .autoencoder import WaveNetAutoencoder
-from .vae import WaveNetVariationalAutoencoder
 from .scheduler import ManualMultiStepLR
+from .visualization import ConfusionMatrix, log, MonkeyWriter
 
 
 def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
@@ -32,12 +29,15 @@ def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
     return scheduler
 
 
-def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
-          testset: data.DataLoader, paths: Dict, iterpoints: Dict, n_it: int,
-          use_board: bool, use_manual_scheduler: bool):
+def train(model: nn.Module, loss_function: Callable, gpu: List[int],
+          trainset: data.DataLoader, testset: data.DataLoader, paths: Dict,
+          iterpoints: Dict, n_it: int, use_board: bool,
+          use_manual_scheduler: bool):
     """
 
     :param model: The WaveNet model Module
+    :param loss_function: The static loss function, should take params:
+        (model: Module, x: Tensor, y: Tensor)
     :param gpu: List of GPUs to use (int indexes)
     :param trainset: The dataset for training data
     :param testset: the dataset for testing data
@@ -48,7 +48,6 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
     :param use_manual_scheduler: Whether to use the original manual scheduler
     :return:
     """
-    is_vae = isinstance(model, WaveNetVariationalAutoencoder)
     # Move model to device(s):
     device = f'cuda:{gpu[0]}' if gpu else 'cpu'
     if gpu:
@@ -59,12 +58,14 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
     scheduler = _setup_scheduler(optimizer, use_manual_scheduler, n_it)
 
     # Setup logging and save stuff
+    writer = MonkeyWriter()
     if use_board:
         from torch.utils.tensorboard import SummaryWriter
-        from .visualization import plot_confusion_matrix
         writer = SummaryWriter()
+
     os.makedirs(paths['save'], exist_ok=True)
-    save_path = f'{paths["save"]}/{datetime.today():%y%m%d}_{{}}_NSynth.pt'
+    save_path = f'{paths["save"]}/{datetime.today():%y%m%d}_{{:06}}_NSynth.pt'
+
     losses, it_times = [], []
     iloader = iter(trainset)
     for it in range(n_it):
@@ -77,31 +78,21 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
             x, y = next(iloader)
 
         model.train()
-        if is_vae:
-            logits, q, x_q = model(x)
-            loss = WaveNetVariationalAutoencoder.loss_function(logits, q, x_q,
-                                                               y.to(device))
-        else:
-            logits = model(x)
-            loss = WaveNetAutoencoder.loss_function(logits, y.to(device))
+        logits, loss = loss_function(model, x, y.to(device))
         model.zero_grad()
         loss.backward()
         optimizer.step()
-        scheduler.step()
+        scheduler.step(it)
 
         losses.append(loss.detach().item())
         it_times.append(time.time() - it_start_time)
 
         # LOG INFO
         if it % iterpoints['print'] == 0:
-            mean_loss = mean(losses)
-            mean_time = mean(it_times)
+            log(writer, it, {'Loss/train': losses,
+                             'Mean time/train': mean(it_times),
+                             'LR': scheduler.get_lr()[0]})
             losses, it_times = [], []
-            print(f'it={it:>10}\tloss:{mean_loss:.3e}\t'
-                  f'time/it:{mean_time}')
-            if use_board:
-                writer.add_scalar('Loss/train', mean_loss, it)
-                writer.add_scalar('Mean Time/train', mean_time, it)
 
         # SAVE THE MODEL
         if it % iterpoints['save'] == 0:
@@ -114,50 +105,17 @@ def train(model: nn.Module, gpu: List[int], trainset: data.DataLoader,
 
         # TEST THE MODEL
         if it % iterpoints['test'] == 0:
-            test_losses = []
+            test_time, test_losses = time.time(), []
+            conf_mat = ConfusionMatrix()
+
             model.eval()
+            for i, (x, y) in enumerate(testset):
+                logits, loss = loss_function(model, x, y)
+                test_losses.append(loss.detach().item())
+                conf_mat.add(logits, y)
 
-            if use_board:
-                confusion_matrix = np.zeros((256, 256))
-                cm_y, cm_logits = np.array([]), np.array([])
-                _cm_step = 0
-
-            test_time = time.time()
-            for x, y in testset:
-                if is_vae:
-                    logits, q, x_q = model(x)
-                    loss = WaveNetVariationalAutoencoder.loss_function(logits,
-                                                                       q, x_q,
-                                                                       y.to(
-                                                                           device))
-                else:
-                    logits = model(x)
-                    loss = WaveNetAutoencoder.loss_function(logits,
-                                                            y.to(device))
-
-                if use_board:
-                    # ADD LR plot
-                    _cm_step += 1
-                    test_losses.append(loss.detach().item())
-                    cm_y = np.append(cm_y, y.cpu().numpy().flatten())
-                    cm_logits = np.append(cm_logits,
-                                          logits.detach().cpu().argmax(
-                                              dim=1).numpy().flatten())
-
-                if use_board and _cm_step == 99:
-                    confusion_matrix += metrics.confusion_matrix(
-                        cm_y, cm_logits, labels=list(range(256)))
-                    cm_y, cm_logits, _cm_step = np.array([]), np.array([]), 0
-
-            mean_test_time = time.time() - test_time
-            mean_test_loss = mean(test_losses)
-            print(f'TESTING: it={it:>10}\tloss:{mean_test_loss:.3e}\t'
-                  f'Time: {mean_test_time}')
-            if use_board:
-                confusion_fig = plot_confusion_matrix(confusion_matrix)
-                np.save('conufsion_matrix.np', confusion_matrix)
-                writer.add_scalar('Loss/test', mean_test_loss, it)
-                writer.add_figure("Class confusion", confusion_fig, it)
-                writer.add_scalar('Mean Time/test', mean_test_time, it)
+            log(writer, it, {'Loss/test': test_losses,
+                             'Class confusion': conf_mat.plot(),
+                             'Mean time/test': time.time() - test_time})
 
     print(f'FINISH {n_it} mini-batches')

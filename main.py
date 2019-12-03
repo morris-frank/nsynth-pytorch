@@ -15,6 +15,7 @@ def main(args):
                            args.crop_length, args.families, args.sources)
 
     train(model=model,
+          loss_function=wavenet.loss_function,
           gpu=args.gpu,
           trainset=loaders['train'],
           testset=loaders['test'],

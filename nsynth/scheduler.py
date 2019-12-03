@@ -36,7 +36,7 @@ class ManualMultiStepLR(_LRScheduler):
         self.base_lrs, self.last_epoch = None, last_epoch
         super(ManualMultiStepLR, self).__init__(optimizer, last_epoch)
 
-    def get_lr(self):
+    def get_lr(self) -> List[float]:
         return [base_lr * self.gammas[bisect_right(self.milestones,
                                                    self.last_epoch)]
                 for base_lr in self.base_lrs]
