@@ -94,7 +94,7 @@ def log(writer: MonkeyWriter, it: int, values: Dict):
                 writer.add_histogram(tag, np.array(val), it)
             except ValueError:
                 print('\tEmpty histogram')
-            mean_tag, mean_val = f'Mean {tag}', mean(val)
+            mean_tag, mean_val = f'{tag}', mean(val)
             mess += f'\t{mean_tag}:{mean_val:.3e}'
             writer.add_scalar(mean_tag, mean_val, it)
     print(mess)

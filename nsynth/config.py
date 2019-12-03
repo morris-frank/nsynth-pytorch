@@ -29,7 +29,7 @@ def make_config() -> ArgumentParser:
                                  'dataset.')
 
     args_log = parser.add_argument_group('Logging options')
-    args_log.add_argument('--itprint', type=int, default=10,
+    args_log.add_argument('--itprint', type=int, default=20,
                           help='Frequency of loss print.')
     args_log.add_argument('--itsave', type=int, default=5000,
                           help='Frequency of model checkpoints.')
