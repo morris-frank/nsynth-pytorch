@@ -1,5 +1,6 @@
 from nsynth import WaveNetAutoencoder, WaveNetVariationalAutoencoder,\
-    make_config, train
+    make_config
+from nsynth.training import train
 from nsynth.data import make_loaders
 
 

@@ -1,14 +1,11 @@
-import matplotlib as mpl
-
-mpl.use('Agg')
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-
-from sklearn import metrics
-import torch
-from typing import Dict
 from statistics import mean
+from typing import Dict
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import torch
+from sklearn import metrics
 
 
 class ConfusionMatrix(object):
@@ -64,6 +61,7 @@ class MonkeyWriter(object):
     """
     Monkey-patched empty version of SummaryWriter of Tensorboard
     """
+
     def add_scalar(self, tag, val, it):
         pass
 

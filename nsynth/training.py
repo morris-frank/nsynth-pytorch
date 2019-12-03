@@ -34,10 +34,9 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
           iterpoints: Dict, n_it: int, use_board: bool,
           use_manual_scheduler: bool):
     """
-
     :param model: The WaveNet model Module
     :param loss_function: The static loss function, should take params:
-        (model: Module, x: Tensor, y: Tensor)
+        (model: Module, x: Tensor, y: Tensor, device: str)
     :param gpu: List of GPUs to use (int indexes)
     :param trainset: The dataset for training data
     :param testset: the dataset for testing data
@@ -64,7 +63,8 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
         writer = SummaryWriter()
 
     os.makedirs(paths['save'], exist_ok=True)
-    save_path = f'{paths["save"]}/{datetime.today():%y%m%d}_{{:06}}_NSynth.pt'
+    save_path = f'{paths["save"]}/{datetime.today():%y%m%d}_{{:06}}_' \
+                f'{type(model).__name__}.pt'
 
     losses, it_times = [], []
     iloader = iter(trainset)
@@ -78,7 +78,7 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
             x, y = next(iloader)
 
         model.train()
-        logits, loss = loss_function(model, x, y.to(device))
+        logits, loss = loss_function(model, x, y, device)
         model.zero_grad()
         loss.backward()
         optimizer.step()
@@ -109,8 +109,8 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
             conf_mat = ConfusionMatrix()
 
             model.eval()
-            for i, (x, y) in enumerate(testset):
-                logits, loss = loss_function(model, x, y)
+            for x, y in testset:
+                logits, loss = loss_function(model, x, y, device)
                 test_losses.append(loss.detach().item())
                 conf_mat.add(logits, y)
 

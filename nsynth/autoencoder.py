@@ -29,11 +29,13 @@ class WaveNetAutoencoder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         embedding = self.encoder(x)
-        output = self.decoder(x, embedding)
-        return output
+        logits = self.decoder(x, embedding)
+        return logits
 
     @staticmethod
-    def loss_function(model: nn.Module, x: torch.Tensor, targets: torch.Tensor):
+    def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
+                      device: str):
+        del device
         logits = model(x)
-        loss = F.cross_entropy(logits, targets)
+        loss = F.cross_entropy(logits, y)
         return logits, loss
