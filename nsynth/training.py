@@ -15,9 +15,6 @@ from .scheduler import ManualMultiStepLR
 from .visualization import ConfusionMatrix, log, MonkeyWriter
 
 
-# FIXME: Save after training!
-
-
 def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
                      n_it: int):
     if use_manual_scheduler:
@@ -92,14 +89,14 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
         it_times.append(time.time() - it_start_time)
 
         # LOG INFO
-        if it % iterpoints['print'] == 0:
+        if it % iterpoints['print'] == 0 or it == n_it:
             log(writer, it, {'Loss/train': losses,
                              'Mean time/train': mean(it_times),
                              'LR': optimizer.param_groups[0]['lr']})
             losses, it_times = [], []
 
         # SAVE THE MODEL
-        if it % iterpoints['save'] == 0:
+        if it % iterpoints['save'] == 0 or it == n_it:
             torch.save({
                 'it': it,
                 'model_state_dict': model.state_dict(),
@@ -108,7 +105,7 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
             }, save_path.format(it))
 
         # TEST THE MODEL
-        if it % iterpoints['test'] == 0:
+        if it % iterpoints['test'] == 0 or it == n_it:
             test_time, test_losses = time.time(), []
             conf_mat = ConfusionMatrix()
 
