@@ -7,9 +7,10 @@ from torch.nn import functional as F
 
 from .decoder import WaveNetDecoder
 from .encoder import TemporalEncoder
+from .modules import AutoEncoder
 
 
-class WaveNetVariationalAutoencoder(nn.Module):
+class WavenetVAE(AutoEncoder):
     """
     The complete WaveNetAutoEncoder model.
     """
@@ -24,7 +25,7 @@ class WaveNetVariationalAutoencoder(nn.Module):
             (WaveNet).
         :param channels: Number of input channels.
         """
-        super(WaveNetVariationalAutoencoder, self).__init__()
+        super(WavenetVAE, self).__init__()
         self.bottleneck_dims = bottleneck_dims
         self.encoder = TemporalEncoder(bottleneck_dims=2 * bottleneck_dims,
                                        channels=channels, width=encoder_width)

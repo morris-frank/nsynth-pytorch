@@ -1,4 +1,5 @@
 from itertools import product
+from typing import List, Optional
 
 import torch
 from torch import nn
@@ -44,6 +45,7 @@ class WaveNetDecoder(nn.Module):
         self.n_stages, self.n_layers = n_blocks, n_layers
         # The compound dilation (input to last layer in each block):
         self.scale_factor = 2 ** (n_layers - 1)
+        self.receptive_field = 2 ** n_layers * n_blocks
 
         self.initial_dilation = BlockWiseConv1d(in_channels=channels,
                                                 out_channels=width,
@@ -89,17 +91,32 @@ class WaveNetDecoder(nn.Module):
             module_list.append(conv(*(args + opt)))
         return nn.ModuleList(module_list)
 
-    def forward(self, x: torch.Tensor, embedding: torch.Tensor) \
+    def forward(self, x: torch.Tensor, embedding: torch.Tensor,
+                conditionals: Optional[List[torch.Tensor]] = None) \
             -> torch.Tensor:
+        """
+
+        :param x:
+        :param embedding:
+        :param conditionals: (Optional) contains list of all upsampled
+            conditionals. Used for generation. If given do not give an
+            embedding.
+        :return:
+        """
         x = shift1d(x, -1)
         x = self.initial_dilation(x)
         skip = self.initial_skip(x)
 
-        layers = (self.dilations, self.conds, self.residuals, self.skips)
-        for l_dilation, l_cond, l_residual, l_skip in zip(*layers):
+        conds = conditionals or self.conds
+
+        layers = (self.dilations, conds, self.residuals, self.skips)
+        for l_dilation, cond, l_residual, l_skip in zip(*layers):
             dilated = l_dilation(x)
-            dilated = self._condition(dilated, l_cond(embedding),
-                                      self.scale_factor)
+            if conditionals:
+                dilated = dilated + cond
+            else:
+                dilated = self._condition(dilated, cond(embedding),
+                                          self.scale_factor)
             filters = torch.sigmoid(dilated[:, :self.width, :])
             gates = torch.tanh(dilated[:, self.width:, :])
             pre_res = filters * gates
@@ -108,8 +125,11 @@ class WaveNetDecoder(nn.Module):
             skip = skip + l_skip(pre_res)
 
         skip = self.final_skip(skip)
-        skip = self._condition(skip, self.final_cond(embedding),
-                               self.scale_factor)
+        if conditionals:
+            skip = skip + conds[-1]
+        else:
+            skip = self._condition(skip, self.final_cond(embedding),
+                                   self.scale_factor)
         quant_skip = self.final_quant(skip)
         return quant_skip
 

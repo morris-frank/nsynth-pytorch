@@ -1,11 +1,11 @@
 import matplotlib as mpl
 
-from .autoencoder import WaveNetAutoencoder
+from .autoencoder import WavenetAE
 from .config import make_config
 from .scheduler import ManualMultiStepLR
-from .vae import WaveNetVariationalAutoencoder
+from .vae import WavenetVAE
 
 mpl.use('Agg')
 
-__all__ = [WaveNetAutoencoder, ManualMultiStepLR, make_config,
-           WaveNetVariationalAutoencoder]
+__all__ = [WavenetAE, ManualMultiStepLR, make_config,
+           WavenetVAE]

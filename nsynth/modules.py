@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import torch
 from torch import nn
 
@@ -47,3 +49,15 @@ class BlockWiseConv1d(nn.Conv1d):
         y = super(BlockWiseConv1d, self).forward(y)
         y = batch_to_time(y, self.block_size)
         return y
+
+
+class AutoEncoder(nn.Module):
+    def __init__(self):
+        super(AutoEncoder, self).__init__()
+        self.encoder = nn.Module()
+        self.decoder = nn.Module()
+
+    @staticmethod
+    def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
+                      device: str) -> Tuple[torch.Tensor, torch.Tensor]:
+        pass

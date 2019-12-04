@@ -1,22 +1,23 @@
-from nsynth import WaveNetAutoencoder, WaveNetVariationalAutoencoder,\
+from nsynth import WavenetAE, WavenetVAE, \
     make_config
-from nsynth.training import train
 from nsynth.data import make_loaders
+from nsynth.training import train
 
 
 def main(args):
-    wavenet = WaveNetVariationalAutoencoder if args.vae else WaveNetAutoencoder
+    model_class = WavenetVAE if args.vae else WavenetAE
+
     # Build model
-    model = wavenet(
-        bottleneck_dims=args.bottleneck_dims,
-        encoder_width=args.encoder_width, decoder_width=args.decoder_width)
+    model = model_class(bottleneck_dims=args.bottleneck_dims,
+                        encoder_width=args.encoder_width,
+                        decoder_width=args.decoder_width)
 
     # Build datasets
     loaders = make_loaders(args.datadir, ['train', 'test'], args.nbatch,
                            args.crop_length, args.families, args.sources)
 
     train(model=model,
-          loss_function=wavenet.loss_function,
+          loss_function=model_class.loss_function,
           gpu=args.gpu,
           trainset=loaders['train'],
           testset=loaders['test'],
@@ -30,4 +31,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main(make_config().parse_args())
+    main(make_config('train').parse_args())

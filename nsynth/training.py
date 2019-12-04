@@ -10,6 +10,7 @@ from torch import optim
 from torch.optim.optimizer import Optimizer
 from torch.utils import data
 
+from .modules import AutoEncoder
 from .scheduler import ManualMultiStepLR
 from .visualization import ConfusionMatrix, log, MonkeyWriter
 
@@ -29,7 +30,7 @@ def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
     return scheduler
 
 
-def train(model: nn.Module, loss_function: Callable, gpu: List[int],
+def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
           trainset: data.DataLoader, testset: data.DataLoader, paths: Dict,
           iterpoints: Dict, n_it: int, use_board: bool,
           use_manual_scheduler: bool):
