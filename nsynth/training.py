@@ -15,6 +15,9 @@ from .scheduler import ManualMultiStepLR
 from .visualization import ConfusionMatrix, log, MonkeyWriter
 
 
+# FIXME: Save after training!
+
+
 def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
                      n_it: int):
     if use_manual_scheduler:

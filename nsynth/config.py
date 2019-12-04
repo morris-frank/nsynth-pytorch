@@ -4,6 +4,8 @@ from os import path
 
 def make_config(version: str) -> ArgumentParser:
     parser = ArgumentParser()
+    parser.add_argument('--gpu', type=int, required=False, nargs='+',
+                        help='The GPU ids to use. If unset, will use CPU.')
 
     if 'train' in version:
         parser.add_argument('--datadir', type=path.abspath, required=True,
@@ -11,9 +13,6 @@ def make_config(version: str) -> ArgumentParser:
                                  '(containing the split directories.)')
 
         gtrain = parser.add_argument_group('Training options')
-        gtrain.add_argument('--gpu', type=int, required=False, nargs='+',
-                            help='The GPU ids to use. If unset, will use '
-                                 'CPU.')
         gtrain.add_argument('--nit', type=int, default=250000,
                             help='Number of batches to train for.')
         gtrain.add_argument('--nbatch', type=int, default=32,
