@@ -31,6 +31,20 @@ def make_config(version: str) -> ArgumentParser:
                             help='The instrument sources to use from the '
                                  'dataset.')
 
+        glog = parser.add_argument_group('Logging options')
+        glog.add_argument('--itprint', type=int, default=20,
+                          help='Frequency of loss print.')
+        glog.add_argument('--itsave', type=int, default=5000,
+                          help='Frequency of model checkpoints.')
+        glog.add_argument('--ittest', type=int, default=500,
+                          help='Frequency of running the test set.')
+        glog.add_argument('--savedir', type=path.abspath, default='./models/',
+                          help='Path to save the checkpoints to.')
+        glog.add_argument('--logdir', type=path.abspath, default='./log/',
+                          help='Path to save the logs to.')
+        glog.add_argument('--board', action='store_true',
+                          help='Whether to use Tensorboard.')
+
     if 'sampl' in version:
         gsampl = parser.add_argument_group('Sampling options')
         gsampl.add_argument('--weights', type=path.abspath, required=True,
@@ -40,20 +54,6 @@ def make_config(version: str) -> ArgumentParser:
         gsampl.add_argument('--sampledir', type=path.abspath,
                             default='./samples',
                             help='Path to save the generated samples to.')
-
-    glog = parser.add_argument_group('Logging options')
-    glog.add_argument('--itprint', type=int, default=20,
-                      help='Frequency of loss print.')
-    glog.add_argument('--itsave', type=int, default=5000,
-                      help='Frequency of model checkpoints.')
-    glog.add_argument('--ittest', type=int, default=500,
-                      help='Frequency of running the test set.')
-    glog.add_argument('--savedir', type=path.abspath, default='./models/',
-                      help='Path to save the checkpoints to.')
-    glog.add_argument('--logdir', type=path.abspath, default='./log/',
-                      help='Path to save the logs to.')
-    glog.add_argument('--board', action='store_true',
-                      help='Whether to use Tensorboard.')
 
     gmodel = parser.add_argument_group('Model options')
     gmodel.add_argument('--bottleneck_dims', type=int, default=16,
