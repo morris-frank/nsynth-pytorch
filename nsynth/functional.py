@@ -15,12 +15,14 @@ def time_to_batch(x: torch.Tensor, block_size: int) -> torch.Tensor:
         Tensor with size:
         [Batch * block size × Channels × Length/block_size]
     """
-    assert x.ndimension() == 3
-    nbatch, c, len = x.shape
+    if block_size == 1:
+        return x
 
-    y = torch.reshape(x, [nbatch, c, len // block_size, block_size])
+    assert x.ndimension() == 3
+    nbatch, c, length = x.shape
+    y = torch.reshape(x, [nbatch, c, length // block_size, block_size])
     y = y.permute(0, 3, 1, 2)
-    y = torch.reshape(y, [nbatch * block_size, c, len // block_size])
+    y = torch.reshape(y, [nbatch * block_size, c, length // block_size])
     return y.contiguous()
 
 
@@ -36,6 +38,9 @@ def batch_to_time(x: torch.Tensor, block_size: int) -> torch.Tensor:
     Returns:
         Tensor with size: [Batch × channels × Length * block_size]
     """
+    if block_size == 1:
+        return x
+
     assert x.ndimension() == 3
     batch_size, channels, k = x.shape
     y = torch.reshape(x, [batch_size // block_size, block_size, channels, k])

@@ -43,6 +43,13 @@ class BlockWiseConv1d(nn.Conv1d):
             pad = ((kernel_size - 1) // 2, (kernel_size - 1) // 2)
         self.pad = nn.ConstantPad1d(pad, 0)
 
+        self.weight_init()
+
+    def weight_init(self):
+        weight, bias = self.weight, self.bias
+        self.weight = nn.init.xavier_uniform_(weight)
+        self.bias = nn.init.constant_(bias, 0.)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = time_to_batch(x, self.block_size)
         y = self.pad(y)

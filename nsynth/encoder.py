@@ -19,8 +19,7 @@ class TemporalEncoder(nn.Module):
                  width: int = 128,
                  kernel_size: int = 3,
                  bottleneck_dims: int = 16,
-                 hop_length: int = 512,
-                 use_bias: bool = True):
+                 hop_length: int = 512):
         """
         :param channels: Number of input channels
         :param n_layers: Number of layers in each stage in the encoder
@@ -29,44 +28,43 @@ class TemporalEncoder(nn.Module):
         :param kernel_size: KS for all 1D-convolutions
         :param bottleneck_dims: Final number of features
         :param hop_length: Final bottleneck pooling
-        :param use_bias: Whether to use bias in all the convolutions.
         """
         super(TemporalEncoder, self).__init__()
 
-        self.encoder = []
-        self.encoder.append(
-            BlockWiseConv1d(in_channels=channels,
-                            out_channels=width,
-                            kernel_size=kernel_size,
-                            causal=False,
-                            block_size=1,
-                            bias=use_bias)
-        )
+        self.init = BlockWiseConv1d(in_channels=channels,
+                                    out_channels=width,
+                                    kernel_size=kernel_size,
+                                    causal=False,
+                                    block_size=1)
+        self.residuals = []
         for _, layer in product(range(n_blocks), range(n_layers)):
-            dilation = 2 ** layer
-            self.encoder.extend([
+            self.residuals.append(nn.Sequential(
                 nn.ReLU(),
                 BlockWiseConv1d(in_channels=width,
                                 out_channels=width,
                                 kernel_size=kernel_size,
                                 causal=False,
-                                block_size=dilation,
-                                bias=use_bias),
+                                block_size=2 ** layer),
                 nn.ReLU(),
-                nn.Conv1d(width, width, 1, bias=use_bias)
-            ])
+                BlockWiseConv1d(in_channels=width,
+                                out_channels=width,
+                                kernel_size=1,
+                                block_size=1)
+            ))
+        self.residuals = nn.ModuleList(self.residuals)
 
         # Bottleneck
-        self.encoder.append(
-            nn.Conv1d(in_channels=width,
-                      out_channels=bottleneck_dims,
-                      kernel_size=1,
-                      bias=use_bias)
-        )
-        self.encoder.append(
+        self.final = nn.Sequential(
+            BlockWiseConv1d(in_channels=width,
+                            out_channels=bottleneck_dims,
+                            kernel_size=1,
+                            block_size=1),
             nn.AvgPool1d(kernel_size=hop_length)
         )
-        self.encoder = nn.Sequential(*self.encoder)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.encoder(x)
+        embedding = self.init(x)
+        for residual in self.residuals:
+            embedding = embedding + residual(embedding)
+        embedding = self.final(embedding)
+        return embedding

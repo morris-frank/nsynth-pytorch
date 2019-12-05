@@ -83,12 +83,14 @@ class WaveNetDecoder(nn.Module):
         Returns:
         ModuleList of len self.n_blocks * self.n_layers
         """
-        conv = nn.Conv1d if kernel_size == 1 else BlockWiseConv1d
         module_list = []
-        args = (in_channels, out_channels, kernel_size)
         for _, layer in product(range(self.n_stages), range(self.n_layers)):
-            opt = () if kernel_size == 1 else (2 ** layer, True)
-            module_list.append(conv(*(args + opt)))
+            block_size = 1 if kernel_size == 1 else 2 ** layer
+            module_list.append(BlockWiseConv1d(in_channels=in_channels,
+                                               out_channels=out_channels,
+                                               kernel_size=kernel_size,
+                                               block_size=block_size,
+                                               causal=kernel_size != 1))
         return nn.ModuleList(module_list)
 
     def forward(self, x: torch.Tensor, embedding: torch.Tensor,
