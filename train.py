@@ -15,7 +15,6 @@ def main(args):
     # Build datasets
     loaders = make_loaders(args.datadir, ['train', 'test'], args.nbatch,
                            args.crop_length, args.families, args.sources)
-
     train(model=model,
           loss_function=model_class.loss_function,
           gpu=args.gpu,
