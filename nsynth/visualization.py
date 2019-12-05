@@ -52,7 +52,7 @@ class ConfusionMatrix(object):
         self.update()
 
         fig, ax = plt.subplots(figsize=(15, 15))
-        sns.heatmap(self.mat, annot=False, ax=ax, cmap='viridis', robust=False,
+        sns.heatmap(self.mat, annot=False, ax=ax, cmap='viridis', robust=True,
                     square=True)
 
         plt.ylabel('True label')
@@ -72,6 +72,9 @@ class MonkeyWriter(object):
         pass
 
     def add_histogram(self, tag, val, it):
+        pass
+
+    def add_text(self, tag, val, it):
         pass
 
 
@@ -95,6 +98,8 @@ def log(writer: MonkeyWriter, it: int, values: Dict):
             mean_tag, mean_val = f'{tag}', mean(val)
             mess += f'\t{mean_tag}:{mean_val:.3e}'
             writer.add_scalar(mean_tag, mean_val, it)
+        elif isinstance(val, str):
+            writer.add_text(tag, val, it)
         else:
             mess += f'\t{tag}:{val:.3e}'
             writer.add_scalar(tag, val, it)

@@ -4,6 +4,7 @@ from datetime import datetime
 from statistics import mean
 from typing import List, Dict, Callable
 
+import numpy as np
 import torch
 from torch import nn
 from torch import optim
@@ -115,7 +116,9 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
                 test_losses.append(loss.detach().item())
                 conf_mat.add(logits, y)
 
-            log(writer, it, {'Loss/test': test_losses,
+            np.save(f'./confusion_matrix_{it}.npy', conf_mat)
+
+            log(writer, it, {'Loss/test': mean(test_losses),
                              'Class confusion': conf_mat.plot(),
                              'Time/test': time.time() - test_time})
 
