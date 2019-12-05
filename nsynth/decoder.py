@@ -52,19 +52,28 @@ class WaveNetDecoder(nn.Module):
                                                 kernel_size=kernel_size,
                                                 block_size=1,
                                                 causal=True)
-        self.initial_skip = nn.Conv1d(width, skip_width, 1)
+
+        self.initial_skip = BlockWiseConv1d(width, skip_width, 1)
 
         self.dilations = self._make_conv_list(width, 2 * width, kernel_size)
         self.conds = self._make_conv_list(bottleneck_dims, 2 * width, 1)
         self.residuals = self._make_conv_list(width, width, 1)
         self.skips = self._make_conv_list(width, skip_width, 1)
 
-        self.final_skip = nn.Sequential(nn.ReLU(),
-                                        nn.Conv1d(skip_width, skip_width, 1))
-        self.final_cond = nn.Conv1d(bottleneck_dims, skip_width, 1)
-        self.final_quant = nn.Sequential(nn.ReLU(),
-                                         nn.Conv1d(skip_width,
-                                                   quantization_channels, 1))
+        self.upsampler = nn.Upsample(scale_factor=self.scale_factor,
+                                     mode='nearest')
+
+        self.final_skip = nn.Sequential(
+            nn.ReLU(),
+            BlockWiseConv1d(skip_width, skip_width, 1)
+        )
+
+        self.final_cond = BlockWiseConv1d(bottleneck_dims, skip_width, 1)
+
+        self.final_quant = nn.Sequential(
+            nn.ReLU(),
+            BlockWiseConv1d(skip_width, quantization_channels, 1)
+        )
 
     def _make_conv_list(self, in_channels: int, out_channels: int,
                         kernel_size: int) -> nn.ModuleList:
@@ -117,8 +126,7 @@ class WaveNetDecoder(nn.Module):
             if conditionals:
                 dilated = dilated + cond
             else:
-                dilated = self._condition(dilated, cond(embedding),
-                                          self.scale_factor)
+                dilated = dilated + self.upsampler(cond(embedding))
             filters = torch.sigmoid(dilated[:, :self.width, :])
             gates = torch.tanh(dilated[:, self.width:, :])
             pre_res = filters * gates
@@ -130,13 +138,6 @@ class WaveNetDecoder(nn.Module):
         if conditionals:
             skip = skip + conds[-1]
         else:
-            skip = self._condition(skip, self.final_cond(embedding),
-                                   self.scale_factor)
+            skip = skip + self.upsampler(self.final_cond(embedding))
         quant_skip = self.final_quant(skip)
         return quant_skip
-
-    @staticmethod
-    def _condition(x, c, scale):
-        cond = nn.Upsample(scale_factor=scale, mode='nearest')(c)
-        x = x + cond
-        return x

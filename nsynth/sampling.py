@@ -56,18 +56,16 @@ def generate(model: AutoEncoder, x: torch.Tensor) \
     :param x:
     :return:
     """
-
     model.eval()
+    decoder = model.decoder
     embedding = model.encoder(x)
 
     # Build and upsample all the conditionals from the embedding:
-    l_upsample = nn.Upsample(scale_factor=model.decoder.scale_factor,
-                             mode='nearest')
-    l_conds = [l_upsample(l_cond(embedding))
-               for l_cond in model.decoder.conds]
-    l_conds.append(l_upsample(model.decoder.final_cond(embedding)))
+    l_conds = [decoder.upsampler(l_cond(embedding))
+               for l_cond in decoder.conds]
+    l_conds.append(decoder.upsampler(decoder.final_cond(embedding)))
 
-    d_size = model.decoder.receptive_field
+    d_size = decoder.receptive_field
     generation = x[0, 0, :d_size]
     rem_length = x.numel() - d_size
 
@@ -76,7 +74,7 @@ def generate(model: AutoEncoder, x: torch.Tensor) \
         g_size = generation.numel() + 1
         conditionals = [l_conds[i][:, :, g_size - d_size:g_size]
                         for i in range(len(l_conds))]
-        val = model.decoder(window, None, conditionals)[:, :, -1].squeeze()
+        val = decoder(window, None, conditionals)[:, :, -1].squeeze()
         val = ((val.argmax().float() - 128.) / 128.).unsqueeze(0)
         generation = torch.cat((generation, val), 0)
 

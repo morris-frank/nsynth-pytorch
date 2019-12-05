@@ -15,8 +15,8 @@ class BlockWiseConv1d(nn.Conv1d):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size: int,
-                 block_size: int,
+                 kernel_size: int = 1,
+                 block_size: int = 1,
                  causal: bool = False,
                  **kwargs):
         """
@@ -26,7 +26,8 @@ class BlockWiseConv1d(nn.Conv1d):
             in_channels: Num of Channels of the Input
             out_channels: Num of Filters in the Convolution
             kernel_size: Size of the Filters
-            block_size: Length of the Blocks we split the input into
+            block_size: Length of the Blocks we split the input into,
+                with block size == 1 ⇒ same as nn.Conv1d!
             causal: Whether to do it Causal or not
             **kwargs:
         """
