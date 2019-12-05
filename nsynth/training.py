@@ -90,8 +90,8 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
 
         # LOG INFO
         if it % iterpoints['print'] == 0 or it == n_it:
-            log(writer, it, {'Loss/train': losses,
-                             'Mean time/train': mean(it_times),
+            log(writer, it, {'Loss/train': mean(losses),
+                             'Time/train': mean(it_times),
                              'LR': optimizer.param_groups[0]['lr']})
             losses, it_times = [], []
 
@@ -117,6 +117,6 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
 
             log(writer, it, {'Loss/test': test_losses,
                              'Class confusion': conf_mat.plot(),
-                             'Mean time/test': time.time() - test_time})
+                             'Time/test': time.time() - test_time})
 
     print(f'FINISH {n_it} mini-batches')

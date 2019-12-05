@@ -85,14 +85,9 @@ def log(writer: MonkeyWriter, it: int, values: Dict):
     mess = f'it={it:>10}\t'
 
     for tag, val in values.items():
-        if isinstance(val, float):
-            mess += f'\t{tag}:{val:.3e}'
-            writer.add_scalar(tag, val, it)
-
         if isinstance(val, plt.Figure):
             writer.add_figure(tag, val, it)
-
-        if isinstance(val, list) and len(val) > 0:
+        elif isinstance(val, list) and len(val) > 0:
             try:
                 writer.add_histogram(tag, np.array(val), it)
             except ValueError:
@@ -100,4 +95,7 @@ def log(writer: MonkeyWriter, it: int, values: Dict):
             mean_tag, mean_val = f'{tag}', mean(val)
             mess += f'\t{mean_tag}:{mean_val:.3e}'
             writer.add_scalar(mean_tag, mean_val, it)
+        else:
+            mess += f'\t{tag}:{val:.3e}'
+            writer.add_scalar(tag, val, it)
     print(mess)
