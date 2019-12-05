@@ -51,9 +51,9 @@ class ConfusionMatrix(object):
         # Add final cached results to the matrix:
         self.update()
 
-        fig, ax = plt.subplots()
-        cmap = 'viridis'
-        sns.heatmap(self.mat, annot=True, ax=ax, cmap=cmap, robust=True)
+        fig, ax = plt.subplots(figsize=(15, 15))
+        sns.heatmap(self.mat, annot=False, ax=ax, cmap='viridis', robust=False,
+                    square=True)
 
         plt.ylabel('True label')
         plt.xlabel('Predicted label')
