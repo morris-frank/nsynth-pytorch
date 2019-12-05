@@ -48,6 +48,9 @@ class ConfusionMatrix(object):
         self.t, self.y, self.i = np.array([]), np.array([]), 0
 
     def plot(self) -> plt.Figure:
+        # Add final cached results to the matrix:
+        self.update()
+
         fig, ax = plt.subplots()
         cmap = 'viridis'
         sns.heatmap(self.mat, annot=True, ax=ax, cmap=cmap, robust=True)

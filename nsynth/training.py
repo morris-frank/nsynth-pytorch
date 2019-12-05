@@ -64,7 +64,7 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
         model = nn.DataParallel(model.to(device), device_ids=gpu)
 
     # Setup optimizer and learning rate scheduler
-    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=2e-4)
+    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-3)
     scheduler = _setup_scheduler(optimizer, use_manual_scheduler, n_it)
 
     losses, it_times = [], []
