@@ -4,7 +4,6 @@ from typing import Tuple
 import librosa
 import torch
 from torch import nn
-from tqdm import trange
 
 from .functional import encode_μ_law
 from .modules import AutoEncoder
@@ -48,7 +47,7 @@ def load_audio(fp: str) -> torch.Tensor:
     return x
 
 
-def generate(model: AutoEncoder, x: torch.Tensor) \
+def generate(model: AutoEncoder, x: torch.Tensor, length: int) \
         -> Tuple[torch.Tensor, torch.Tensor]:
     """
 
@@ -58,24 +57,12 @@ def generate(model: AutoEncoder, x: torch.Tensor) \
     """
     model.eval()
     decoder = model.decoder
-    embedding = model.encoder(x)
+    embedding = model.encoder(x).mean(-1).unsqueeze(-1)
 
     # Build and upsample all the conditionals from the embedding:
-    l_conds = [decoder.upsampler(l_cond(embedding))
-               for l_cond in decoder.conds]
-    l_conds.append(decoder.upsampler(decoder.final_cond(embedding)))
+    l_conds = [l_cond(embedding) for l_cond in decoder.conds]
+    l_conds.append(decoder.final_cond(embedding))
 
-    d_size = decoder.receptive_field
-    generation = x[0, 0, :d_size]
-    rem_length = x.numel() - d_size
-
-    for _ in trange(rem_length):
-        window = generation[-d_size:].view(1, 1, d_size)
-        g_size = generation.numel() + 1
-        conditionals = [l_conds[i][:, :, g_size - d_size:g_size]
-                        for i in range(len(l_conds))]
-        val = decoder(window, None, conditionals)[:, :, -1].squeeze()
-        val = ((val.argmax().float() - 128.) / 128.).unsqueeze(0)
-        generation = torch.cat((generation, val), 0)
+    generation = decoder.generate(x, l_conds, length, 1)
 
     return generation.cpu(), embedding.cpu()

@@ -3,9 +3,10 @@ from typing import List, Optional
 
 import torch
 from torch import nn
+from torch.nn import functional as F
+from tqdm import trange
 
-from .functional import shift1d
-from .modules import BlockWiseConv1d
+from .modules import BlockWiseConv1d, DilatedQueue
 
 
 class WaveNetDecoder(nn.Module):
@@ -28,7 +29,8 @@ class WaveNetDecoder(nn.Module):
                  channels: int = 1,
                  quantization_channels: int = 256,
                  bottleneck_dims: int = 16,
-                 kernel_size: int = 3):
+                 kernel_size: int = 3,
+                 gen: bool = False):
         """
         :param n_layers: Number of layers in each block
         :param n_blocks: Number of blocks
@@ -39,6 +41,7 @@ class WaveNetDecoder(nn.Module):
         :param bottleneck_dims: Dim/width/size of the conditioning, output
             of the encoder
         :param kernel_size: Kernel-size to use
+        :param gen: Is this generation ?
         """
         super(WaveNetDecoder, self).__init__()
         self.width = width
@@ -46,6 +49,9 @@ class WaveNetDecoder(nn.Module):
         # The compound dilation (input to last layer in each block):
         self.scale_factor = 2 ** (n_layers - 1)
         self.receptive_field = 2 ** n_layers * n_blocks
+        self.quantization_channels = quantization_channels
+        self.gen = gen
+        self.kernel_size = kernel_size
 
         self.initial_dilation = BlockWiseConv1d(in_channels=channels,
                                                 out_channels=width,
@@ -55,10 +61,18 @@ class WaveNetDecoder(nn.Module):
 
         self.initial_skip = BlockWiseConv1d(width, skip_width, 1)
 
-        self.dilations = self._make_conv_list(width, 2 * width, kernel_size)
-        self.conds = self._make_conv_list(bottleneck_dims, 2 * width, 1)
-        self.residuals = self._make_conv_list(width, width, 1)
-        self.skips = self._make_conv_list(width, skip_width, 1)
+        self.dilations = self._make_conv_list(width, 2 * width, kernel_size,
+                                              not gen)
+        self.conds = self._make_conv_list(bottleneck_dims, 2 * width, 1, False)
+        self.residuals = self._make_conv_list(width, width, 1, False)
+        self.skips = self._make_conv_list(width, skip_width, 1, False)
+
+        self.queues = []
+        for _, l in product(range(self.n_stages), range(self.n_layers)):
+            self.queues.append(
+                DilatedQueue(size=(kernel_size - 1) * 2 ** l + 1,
+                             channels=width, dilation=2 ** l)
+            )
 
         self.upsampler = nn.Upsample(scale_factor=self.scale_factor,
                                      mode='nearest')
@@ -76,7 +90,7 @@ class WaveNetDecoder(nn.Module):
         )
 
     def _make_conv_list(self, in_channels: int, out_channels: int,
-                        kernel_size: int) -> nn.ModuleList:
+                        kernel_size: int, dilate: bool) -> nn.ModuleList:
         """
         A little helper function for generating lists of Convolutions. Will
         give list of n_blocks × n_layers number of convolutions. If kernel_size
@@ -84,17 +98,15 @@ class WaveNetDecoder(nn.Module):
         block size from the power-2 dilation otherwise we always use the same
         1×1-conv1d.
 
-        Args:
-            in_channels: In channels
-            out_channels: out channels
-            kernel_size: kernel size
-
-        Returns:
-        ModuleList of len self.n_blocks * self.n_layers
+        :param in_channels:
+        :param out_channels:
+        :param kernel_size:
+        :param dilate: Whether to dilate in each step
+        :return: ModuleList of len self.n_blocks * self.n_layers
         """
         module_list = []
         for _, layer in product(range(self.n_stages), range(self.n_layers)):
-            block_size = 1 if kernel_size == 1 else 2 ** layer
+            block_size = 2 ** layer if dilate else 1
             module_list.append(BlockWiseConv1d(in_channels=in_channels,
                                                out_channels=out_channels,
                                                kernel_size=kernel_size,
@@ -119,9 +131,18 @@ class WaveNetDecoder(nn.Module):
 
         conds = conditionals or self.conds
 
-        layers = (self.dilations, conds, self.residuals, self.skips)
-        for l_dilation, cond, l_residual, l_skip in zip(*layers):
-            dilated = l_dilation(x)
+        layers = (self.dilations, conds, self.residuals, self.skips,
+                  self.queues)
+        for l_dilation, cond, l_residual, l_skip, queue in zip(*layers):
+            if self.gen:
+                queue.enqueue(x.squeeze())
+                dilated = queue.dequeue(num_deq=self.kernel_size)
+                dilated = dilated.unsqueeze(0)
+            else:
+                dilated = x
+            dilated = l_dilation(dilated)
+            if self.gen:
+                dilated = dilated[:, :, 1].unsqueeze(-1)
             if conditionals:
                 dilated = dilated + cond
             else:
@@ -130,7 +151,7 @@ class WaveNetDecoder(nn.Module):
             gates = torch.tanh(dilated[:, self.width:, :])
             pre_res = filters * gates
 
-            x = x + l_residual(pre_res)
+            x = x + l_residual(pre_res)  # Is this correct????
             skip = skip + l_skip(pre_res)
 
         skip = self.final_skip(skip)
@@ -140,3 +161,29 @@ class WaveNetDecoder(nn.Module):
             skip = skip + self.upsampler(self.final_cond(embedding))
         quant_skip = self.final_quant(skip)
         return quant_skip
+
+    def generate(self, x: torch.Tensor, conditionals, length: int,
+                 temp: float = 1.):
+        for queue in self.queues:
+            queue.reset()
+
+        rem_length = length - x.numel()
+
+        # Fill queues with initial values
+        for i in trange(x.numel() - 1):
+            inp = x[0, 0, i:i + 1].view(1, 1, 1)
+            _ = self(inp, None, conditionals)
+
+        generation = torch.zeros(length)
+        for i in trange(rem_length):
+            logits = self(inp, None, conditionals).squeeze()
+
+            if temp > 0:
+                prob = F.softmax(logits / temp, dim=0)
+                c = torch.multinomial(prob, 1).float()
+            else:
+                c = torch.argmax(logits).float()
+            c = (c - 128.) / 128.
+            generation[i] = c.cpu()
+            inp = c.view(1, 1, 1)
+        return generation
