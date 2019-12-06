@@ -6,3 +6,4 @@ scikit-learn>=0.21.3
 seaborn>=0.9.0
 Pillow>=6.2.1
 SoundFile>=0.10.3
+tqdm==4.39.0
