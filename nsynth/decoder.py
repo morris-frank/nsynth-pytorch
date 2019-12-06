@@ -162,10 +162,10 @@ class WaveNetDecoder(nn.Module):
         quant_skip = self.final_quant(skip)
         return quant_skip
 
-    def generate(self, x: torch.Tensor, conditionals, length: int,
+    def generate(self, x: torch.Tensor, conditionals, length: int, device: str,
                  temp: float = 1.):
         for queue in self.queues:
-            queue.reset()
+            queue.reset(device)
 
         rem_length = length - x.numel()
 

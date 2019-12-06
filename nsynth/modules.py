@@ -90,10 +90,10 @@ class DilatedQueue:
         self.idx_de = (self.idx_de + 1) % self.size
         return t
 
-    def reset(self):
+    def reset(self, device: str = 'cpu'):
         self.idx_en, self.idx_de = 0, 0
         self.data = torch.zeros((self.channels, self.size),
-                                dtype=self.dtype)
+                                dtype=self.dtype).to(device)
 
 
 class AutoEncoder(nn.Module):

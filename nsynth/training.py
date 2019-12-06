@@ -90,14 +90,14 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
         it_times.append(time.time() - it_start_time)
 
         # LOG INFO
-        if it % iterpoints['print'] == 0 or it == n_it:
+        if it % iterpoints['print'] == 0 or it == n_it - 1:
             log(writer, it, {'Loss/train': mean(losses),
                              'Time/train': mean(it_times),
                              'LR': optimizer.param_groups[0]['lr']})
             losses, it_times = [], []
 
         # SAVE THE MODEL
-        if it % iterpoints['save'] == 0 or it == n_it:
+        if it % iterpoints['save'] == 0 or it == n_it - 1:
             torch.save({
                 'it': it,
                 'model_state_dict': model.state_dict(),
@@ -106,7 +106,7 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
             }, save_path.format(it))
 
         # TEST THE MODEL
-        if it % iterpoints['test'] == 0 or it == n_it:
+        if it % iterpoints['test'] == 0 or it == n_it - 1:
             test_time, test_losses = time.time(), []
             conf_mat = ConfusionMatrix()
 

@@ -12,7 +12,6 @@ def main(args):
     model_class = WavenetVAE if args.vae else WavenetAE
     device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
 
-    args.bottleneck_dims, args.encoder_width, args.decoder_width = 4, 8, 8
     # Build model
     model = model_class(bottleneck_dims=args.bottleneck_dims,
                         encoder_width=args.encoder_width,
@@ -26,7 +25,7 @@ def main(args):
     sample = sample[0, 0, :d_size].view(1, 1, d_size).to(device)
 
     with torch.no_grad():
-        generation, embedding = generate(model, sample, numel)
+        generation, embedding = generate(model, sample, numel, device)
 
     os.makedirs(args.sampledir, exist_ok=True)
     sp = f'{args.sampledir}/{path.splitext(path.basename(args.sample))[0]}' \

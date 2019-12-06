@@ -47,7 +47,7 @@ def load_audio(fp: str) -> torch.Tensor:
     return x
 
 
-def generate(model: AutoEncoder, x: torch.Tensor, length: int) \
+def generate(model: AutoEncoder, x: torch.Tensor, length: int, device: str) \
         -> Tuple[torch.Tensor, torch.Tensor]:
     """
 
@@ -63,6 +63,6 @@ def generate(model: AutoEncoder, x: torch.Tensor, length: int) \
     l_conds = [l_cond(embedding) for l_cond in decoder.conds]
     l_conds.append(decoder.final_cond(embedding))
 
-    generation = decoder.generate(x, l_conds, length, 1)
+    generation = decoder.generate(x, l_conds, length, device, 1)
 
     return generation.cpu(), embedding.cpu()
