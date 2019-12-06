@@ -6,6 +6,7 @@ from torch.nn import functional as F
 
 from .decoder import WaveNetDecoder
 from .encoder import TemporalEncoder
+from .functional import shift1d
 from .modules import AutoEncoder
 
 
@@ -32,6 +33,7 @@ class WavenetAE(AutoEncoder):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         embedding = self.encoder(x)
+        x = shift1d(x, -1)
         logits = self.decoder(x, embedding)
         return logits
 

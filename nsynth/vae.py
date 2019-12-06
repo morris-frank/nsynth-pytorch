@@ -7,6 +7,7 @@ from torch.nn import functional as F
 
 from .decoder import WaveNetDecoder
 from .encoder import TemporalEncoder
+from .functional import shift1d
 from .modules import AutoEncoder
 
 
@@ -42,6 +43,7 @@ class WavenetVAE(AutoEncoder):
         x_q = q.rsample()
         x_q_log_prob = q.log_prob(x_q)
 
+        x = shift1d(x, -1)
         logits = self.decoder(x, x_q)
         return logits, x_q, x_q_log_prob
 

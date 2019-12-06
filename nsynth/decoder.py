@@ -114,7 +114,6 @@ class WaveNetDecoder(nn.Module):
             embedding.
         :return:
         """
-        x = shift1d(x, -1)
         x = self.initial_dilation(x)
         skip = self.initial_skip(x)
 
