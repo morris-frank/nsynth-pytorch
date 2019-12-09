@@ -14,11 +14,12 @@ def main():
     sr = 16000
 
     pts = set(map(fname, glob(f'{sdir}/*pt')))
-    wavs = set(map(fname, glob(f'{sdir}/*wav')))
+    # wavs = set(map(fname, glob(f'{sdir}/*wav')))
 
-    for name in pts - wavs:
+    for name in pts:
         d = torch.load(f'{name}.pt')
-        sf.write(f'{name}.wav', d['generation'], sr, subtype='PCM_24')
+        raw = d['generation']
+        sf.write(f'{name}.wav', raw, sr, subtype='PCM_24')
         print(f'Converted {name}')
 
 
