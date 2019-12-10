@@ -17,6 +17,7 @@ class WavenetAE(AutoEncoder):
 
     def __init__(self, bottleneck_dims: int, encoder_width: int,
                  decoder_width: int, n_layers: int = 10, n_blocks: int = 3,
+                 quantization_channels: int = 256,
                  channels: int = 1, gen: bool = False):
         """
         :param bottleneck_dims: Number of dims in the latent bottleneck.
@@ -26,6 +27,7 @@ class WavenetAE(AutoEncoder):
             (WaveNet).
         :param n_layers: number of layers in each block of encoder and decoder
         :param n_blocks: number of blocks for both
+        :param quantization_channels:
         :param channels: Number of input channels.
         :param gen: Is this generation ?
         """
@@ -36,6 +38,7 @@ class WavenetAE(AutoEncoder):
         self.decoder = WaveNetDecoder(bottleneck_dims=bottleneck_dims,
                                       channels=channels, width=decoder_width,
                                       n_layers=n_layers, n_blocks=n_blocks,
+                                      quantization_channels=quantization_channels,
                                       gen=gen)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

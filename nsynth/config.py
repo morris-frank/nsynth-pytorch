@@ -69,6 +69,9 @@ def make_config(version: str) -> ArgumentParser:
                         help='Number of dilation layers in each block.')
     gmodel.add_argument('--nblocks', type=int, default=3, dest='n_blocks',
                         help='Number of blocks.')
+    gmodel.add_argument('--quant', type=int, default=256,
+                        dest='quantization_channels',
+                        help='Number of channels to quantise with.')
     gmodel.add_argument('--vae', action='store_true',
                         help='Whether to use the VAE model.')
     return parser
@@ -84,5 +87,6 @@ def make_model(args) -> AutoEncoder:
                         encoder_width=args.encoder_width,
                         decoder_width=args.decoder_width,
                         n_layers=args.n_layers, n_blocks=args.n_blocks,
+                        quantization_channels=args.quantization_channels,
                         gen=args.decoder_gen)
     return model
