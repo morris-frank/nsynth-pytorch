@@ -2,15 +2,13 @@ from nsynth import WavenetAE, WavenetVAE, \
     make_config
 from nsynth.data import make_loaders
 from nsynth.training import train
+from nsynth.config import make_model
 
 
 def main(args):
     model_class = WavenetVAE if args.vae else WavenetAE
 
-    # Build model
-    model = model_class(bottleneck_dims=args.bottleneck_dims,
-                        encoder_width=args.encoder_width,
-                        decoder_width=args.decoder_width)
+    model = make_model(args)
 
     # Build datasets
     loaders = make_loaders(args.datadir, ['train', 'test'], args.nbatch,

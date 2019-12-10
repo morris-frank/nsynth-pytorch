@@ -17,22 +17,27 @@ class WavenetVAE(AutoEncoder):
     """
 
     def __init__(self, bottleneck_dims: int, encoder_width: int,
-                 decoder_width: int, channels: int = 1, gen: bool = False):
+                 decoder_width: int, n_layers: int = 10, n_blocks: int = 3,
+                 channels: int = 1, gen: bool = False):
         """
         :param bottleneck_dims: Number of dims in the latent bottleneck.
         :param encoder_width: Width of the hidden layers in the encoder (Non-
             causal Temporal encoder).
         :param decoder_width: Width of the hidden layers in the decoder
             (WaveNet).
+        :param n_layers: number of layers in encoder and decoder
+        :param n_blocks: number of blocks in encoder and decoder
         :param channels: Number of input channels.
         :param gen: Is this generation ?
         """
         super(WavenetVAE, self).__init__()
         self.bottleneck_dims = bottleneck_dims
         self.encoder = TemporalEncoder(bottleneck_dims=2 * bottleneck_dims,
-                                       channels=channels, width=encoder_width)
+                                       channels=channels, width=encoder_width,
+                                       n_layers=n_layers, n_blocks=n_blocks)
         self.decoder = WaveNetDecoder(bottleneck_dims=bottleneck_dims,
                                       channels=channels, width=decoder_width,
+                                      n_layers=n_layers, n_blocks=n_blocks,
                                       gen=gen)
 
     def forward(self, x: torch.Tensor) \
