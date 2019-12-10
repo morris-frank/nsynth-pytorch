@@ -77,7 +77,7 @@ def make_config(version: str) -> ArgumentParser:
 def make_model(args) -> AutoEncoder:
     model_class = WavenetVAE if args.vae else WavenetAE
 
-    args.decoder_gen = args.decoder_gen or False
+    args.decoder_gen = args.decoder_gen if 'decoder_gen' in args else False
 
     # Build model
     model = model_class(bottleneck_dims=args.bottleneck_dims,
