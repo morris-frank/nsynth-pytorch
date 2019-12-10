@@ -1,7 +1,9 @@
 from argparse import ArgumentParser
 from os import path
-from . import WavenetAE, WavenetVAE
+
+from .autoencoder import WavenetAE
 from .modules import AutoEncoder
+from .vae import WavenetVAE
 
 
 def make_config(version: str) -> ArgumentParser:
