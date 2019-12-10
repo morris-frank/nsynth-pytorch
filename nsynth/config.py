@@ -65,9 +65,9 @@ def make_config(version: str) -> ArgumentParser:
                         help='Dimensions of the encoders hidden layers.')
     gmodel.add_argument('--decoder_width', type=int, default=512,
                         help='Dimensions of the decoders hidden layers.')
-    gmodel.add_argument('--nlayers', type=int, default=10,
+    gmodel.add_argument('--nlayers', type=int, default=10, dest='n_layers',
                         help='Number of dilation layers in each block.')
-    gmodel.add_argument('--nblocks', type=int, default=3,
+    gmodel.add_argument('--nblocks', type=int, default=3, dest='n_blocks',
                         help='Number of blocks.')
     gmodel.add_argument('--vae', action='store_true',
                         help='Whether to use the VAE model.')
