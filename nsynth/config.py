@@ -58,6 +58,11 @@ def make_config(version: str) -> ArgumentParser:
                             default='./samples',
                             help='Path to save the generated samples to.')
 
+    if 'plot' in version:
+        gplt = parser.add_argument_group('Plotting options')
+        gplt.add_argument('--weights', type=path.abspath, required=True,
+                          help='Path to the saved weight file.')
+
     gmodel = parser.add_argument_group('Model options')
     gmodel.add_argument('--bottleneck_dims', type=int, default=16,
                         help='Size ot the Autoencoder Bottleneck.')
